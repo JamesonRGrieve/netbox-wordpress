@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
     initial = True
     dependencies = [
         ("dcim", "0001_initial"),
-        ("virtualization", "0001_initial"),
+        ("virtualization", "0001_virtualization"),
         ("extras", "0001_initial"),
         ("netbox_services", "0001_initial"),
         ("netbox_database", "0001_initial"),
