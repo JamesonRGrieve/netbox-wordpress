@@ -1,0 +1,129 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""FilterSet tests against a real DB (no mocks)."""
+from django.test import TestCase
+from utilities.testing import create_test_device
+
+from netbox_wordpress.choices import FPMProfileChoices, PluginSourceChoices, RelocationStateChoices, WPConstantTypeChoices
+from netbox_wordpress.filtersets import (
+    WordPressConstantFilterSet, WordPressContentDirectoryFilterSet, WordPressPluginFilterSet,
+    WordPressSiteFilterSet, WordPressThemeFilterSet,
+)
+from netbox_wordpress.models import (
+    WordPressConstant, WordPressContentDirectory, WordPressPlugin, WordPressSite, WordPressTheme,
+)
+from netbox_wordpress.tests.utils import create_wp_site
+
+
+class WordPressSiteFilterSetTest(TestCase):
+    queryset = WordPressSite.objects.all()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.d1 = create_test_device("dev1")
+        cls.d2 = create_test_device("dev2")
+        WordPressSite.objects.create(name="alpha", device=cls.d1, fpm_profile=FPMProfileChoices.LOW, is_multisite=True)
+        WordPressSite.objects.create(name="bravo", device=cls.d2, fpm_profile=FPMProfileChoices.HIGH)
+
+    def test_device_id_scopes(self):
+        self.assertEqual(WordPressSiteFilterSet({"device_id": [self.d1.pk]}, self.queryset).qs.count(), 1)
+
+    def test_fpm_profile(self):
+        self.assertEqual(WordPressSiteFilterSet({"fpm_profile": [FPMProfileChoices.HIGH]}, self.queryset).qs.count(), 1)
+
+    def test_is_multisite(self):
+        self.assertEqual(WordPressSiteFilterSet({"is_multisite": True}, self.queryset).qs.count(), 1)
+
+    def test_search(self):
+        self.assertEqual(WordPressSiteFilterSet({"q": "alpha"}, self.queryset).qs.count(), 1)
+
+
+class WordPressConstantFilterSetTest(TestCase):
+    queryset = WordPressConstant.objects.all()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.s1 = create_wp_site("s1")
+        cls.s2 = create_wp_site("s2")
+        WordPressConstant.objects.bulk_create([
+            WordPressConstant(site=cls.s1, name="WP_DEBUG", value="false", value_type=WPConstantTypeChoices.BOOL),
+            WordPressConstant(site=cls.s1, name="WP_MEMORY_LIMIT", value="256M", value_type=WPConstantTypeChoices.STRING),
+            WordPressConstant(site=cls.s2, name="WP_DEBUG", value="true", value_type=WPConstantTypeChoices.BOOL),
+        ])
+
+    def test_site_id_scopes(self):
+        self.assertEqual(WordPressConstantFilterSet({"site_id": [self.s1.pk]}, self.queryset).qs.count(), 2)
+
+    def test_value_type(self):
+        self.assertEqual(WordPressConstantFilterSet({"value_type": [WPConstantTypeChoices.BOOL]}, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        self.assertEqual(WordPressConstantFilterSet({"q": "WP_MEMORY_LIMIT"}, self.queryset).qs.count(), 1)
+
+
+class WordPressPluginFilterSetTest(TestCase):
+    queryset = WordPressPlugin.objects.all()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.s1 = create_wp_site("p1")
+        cls.s2 = create_wp_site("p2")
+        WordPressPlugin.objects.bulk_create([
+            WordPressPlugin(site=cls.s1, slug="woocommerce", source=PluginSourceChoices.WPORG, is_active=True),
+            WordPressPlugin(site=cls.s1, slug="redis-cache", source=PluginSourceChoices.ZIP, is_active=False),
+            WordPressPlugin(site=cls.s2, slug="jetpack", source=PluginSourceChoices.WPORG, is_active=True),
+        ])
+
+    def test_site_id_scopes(self):
+        self.assertEqual(WordPressPluginFilterSet({"site_id": [self.s1.pk]}, self.queryset).qs.count(), 2)
+
+    def test_source(self):
+        self.assertEqual(WordPressPluginFilterSet({"source": [PluginSourceChoices.ZIP]}, self.queryset).qs.count(), 1)
+
+    def test_is_active(self):
+        self.assertEqual(WordPressPluginFilterSet({"is_active": True}, self.queryset).qs.count(), 2)
+
+    def test_search(self):
+        self.assertEqual(WordPressPluginFilterSet({"q": "woocommerce"}, self.queryset).qs.count(), 1)
+
+
+class WordPressThemeFilterSetTest(TestCase):
+    queryset = WordPressTheme.objects.all()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.s1 = create_wp_site("t1")
+        cls.s2 = create_wp_site("t2")
+        WordPressTheme.objects.bulk_create([
+            WordPressTheme(site=cls.s1, slug="twentytwentyfour", is_active=True),
+            WordPressTheme(site=cls.s1, slug="astra", is_active=False),
+            WordPressTheme(site=cls.s2, slug="kadence", source=PluginSourceChoices.ZIP),
+        ])
+
+    def test_site_id_scopes(self):
+        self.assertEqual(WordPressThemeFilterSet({"site_id": [self.s1.pk]}, self.queryset).qs.count(), 2)
+
+    def test_source(self):
+        self.assertEqual(WordPressThemeFilterSet({"source": [PluginSourceChoices.ZIP]}, self.queryset).qs.count(), 1)
+
+    def test_search(self):
+        self.assertEqual(WordPressThemeFilterSet({"q": "astra"}, self.queryset).qs.count(), 1)
+
+
+class WordPressContentDirectoryFilterSetTest(TestCase):
+    queryset = WordPressContentDirectory.objects.all()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.s1 = create_wp_site("cd1")
+        cls.s2 = create_wp_site("cd2")
+        WordPressContentDirectory.objects.create(site=cls.s1, content_dir="/var/www/a/wp-content", relocation_state=RelocationStateChoices.IN_PLACE)
+        WordPressContentDirectory.objects.create(site=cls.s2, content_dir="/var/www/b/wp-content", target_content_dir="/srv/b", relocation_state=RelocationStateChoices.RELOCATING)
+
+    def test_site_id_scopes(self):
+        self.assertEqual(WordPressContentDirectoryFilterSet({"site_id": [self.s1.pk]}, self.queryset).qs.count(), 1)
+
+    def test_relocation_state(self):
+        self.assertEqual(WordPressContentDirectoryFilterSet({"relocation_state": [RelocationStateChoices.RELOCATING]}, self.queryset).qs.count(), 1)
+
+    def test_search(self):
+        self.assertEqual(WordPressContentDirectoryFilterSet({"q": "/srv/b"}, self.queryset).qs.count(), 1)

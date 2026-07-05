@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "domain": "netbox.plugins.wordpress",
+  "title": "netbox-wordpress remaining deep work",
+  "description": "Buildable baseline + full spec landed (models, choices, api, filtersets, forms, tables, nav, views, urls, custom template, hand-authored migration, no-mock tests, docs). py_compile passes. The items below are the deep work that needs a live NetBox / real data.",
+  "phases": [
+    {
+      "number": 1,
+      "title": "Verification owed (live NetBox)",
+      "exit_criteria": "makemigrations --check clean and full test suite green on pinned NetBox 4.6 with netbox-services + netbox-database installed.",
+      "items": [
+        {
+          "number": "1.1",
+          "feature": "Migration parity check",
+          "description": "Run `python manage.py makemigrations netbox_wordpress --check --dry-run` on an ephemeral NetBox 4.6; confirm the hand-authored 0001_initial matches the models and the cross-plugin FK targets (netbox_services.serviceinstance, netbox_database.database, netbox_database.databaseuser) resolve.",
+          "sot": "NB",
+          "done": false
+        },
+        {
+          "number": "1.2",
+          "feature": "Full no-mock test run",
+          "description": "Run `python /opt/netbox/app/netbox/manage.py test netbox_wordpress --keepdb -v2` against a real test DB; fix any FK/serializer/filter drift surfaced by the real ORM.",
+          "sot": "NB",
+          "done": false
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Backfill + seeding from the live fleet",
+      "exit_criteria": "The 301-321 WordPress fleet is represented in NetBox with correct fpm_profile, memory limits, DB/service links, and the well-known constant overrides.",
+      "items": [
+        {
+          "number": "2.1",
+          "feature": "Seeder script",
+          "description": "Write seed_netbox_wordpress.py (idempotent upsert) that creates WordPressSite + child rows. Follows the netbox-seeder dry-run->confirm->apply discipline.",
+          "sot": "NB",
+          "done": false
+        },
+        {
+          "number": "2.2",
+          "feature": "Fleet backfill from install_wordpress.yml",
+          "description": "Map the header's fleet assignment (low: 301 303 304 306 308 310 316 319 320; medium: 302 305 307 309 311-315 317 318 321) and per-host_vars into WordPressSite.fpm_profile / wp_memory_limit / prod_hardening; link each to its ServiceInstance + Database/DatabaseUser.",
+          "sot": "NB",
+          "done": false
+        },
+        {
+          "number": "2.3",
+          "feature": "Well-known constant defaults table",
+          "description": "Encode the wp-config.php.j2 fleet defaults (DISALLOW_FILE_EDIT=true, WP_AUTO_UPDATE_CORE=minor, DISABLE_WP_CRON=true, WP_POST_REVISIONS=5, EMPTY_TRASH_DAYS=7, WP_DEBUG/_LOG/_DISPLAY=false, WP_REDIS_*, WP_CACHE) as documented defaults; seed WordPressConstant rows ONLY where a site overrides the default (per DESIGN.md §4).",
+          "sot": "NB",
+          "done": false
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Content-relocation exercise",
+      "exit_criteria": "A WordPressContentDirectory target_content_dir change drives a 0-diff tofu-wordpress relocation (in_place->relocating->relocated) on a lab site.",
+      "items": [
+        {
+          "number": "3.1",
+          "feature": "Relocation state-machine end-to-end",
+          "description": "Prove the quiesce->move+verify->rewrite defines->symlink/health->rollback contract (DESIGN.md §5) via tofu-wordpress against a lab WordPress site, including the rollback path on a forced health-check failure.",
+          "sot": "NB",
+          "done": false
+        }
+      ]
+    }
+  ],
+  "state": {}
+}

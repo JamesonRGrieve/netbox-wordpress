@@ -1,0 +1,80 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+{% block content %}
+<div class="row">
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">Site</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Name</th><td>{{ object.name }}</td></tr>
+        <tr><th scope="row">URL</th><td>{{ object.site_url|placeholder }}</td></tr>
+        <tr><th scope="row">Core version</th><td>{{ object.wp_version|placeholder }}</td></tr>
+        <tr><th scope="row">Table prefix</th><td>{{ object.table_prefix }}</td></tr>
+        <tr><th scope="row">Multisite</th><td>{% checkmark object.is_multisite %}</td></tr>
+        <tr><th scope="row">Prod hardening</th><td>{% checkmark object.prod_hardening %}</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h2 class="card-header">Host</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Device</th><td>{{ object.device|linkify|placeholder }}</td></tr>
+        <tr><th scope="row">Virtual machine</th><td>{{ object.virtual_machine|linkify|placeholder }}</td></tr>
+        <tr><th scope="row">Service instance</th><td>{{ object.service_instance|linkify|placeholder }}</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h2 class="card-header">Tuning &amp; secrets</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">FPM profile</th><td>{% if object.fpm_profile %}<span class="badge text-bg-{{ object.get_fpm_profile_color }}">{{ object.get_fpm_profile_display }}</span>{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+        <tr><th scope="row">WP memory limit</th><td>{{ object.wp_memory_limit|placeholder }}</td></tr>
+        <tr><th scope="row">Salt ref (OpenBao)</th><td>{{ object.salt_ref|placeholder }}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">Database</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Database</th><td>{{ object.database|linkify|placeholder }}</td></tr>
+        <tr><th scope="row">DB user</th><td>{{ object.db_user|linkify|placeholder }}</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h2 class="card-header">Content directory</h2>
+      <table class="table table-hover attr-table">
+        {% with cd=object.content_directory %}
+        {% if cd %}
+        <tr><th scope="row">Current dir</th><td>{{ cd.content_dir }}</td></tr>
+        <tr><th scope="row">Target dir</th><td>{{ cd.target_content_dir|placeholder }}</td></tr>
+        <tr><th scope="row">Relocation</th><td><span class="badge text-bg-{{ cd.get_relocation_state_color }}">{{ cd.get_relocation_state_display }}</span></td></tr>
+        {% else %}
+        <tr><td colspan="2" class="text-muted">No content directory record</td></tr>
+        {% endif %}
+        {% endwith %}
+      </table>
+    </div>
+    <div class="card">
+      <h2 class="card-header">Plugins</h2>
+      <table class="table table-hover attr-table">
+        {% for p in object.plugins.all %}
+        <tr><td>{{ p.slug|linkify }}</td><td>{{ p.version|placeholder }}</td><td>{% checkmark p.is_active %}</td></tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-muted">No plugins</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div class="card">
+      <h2 class="card-header">Themes</h2>
+      <table class="table table-hover attr-table">
+        {% for t in object.themes.all %}
+        <tr><td>{{ t.slug|linkify }}</td><td>{{ t.version|placeholder }}</td><td>{% checkmark t.is_active %}</td></tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-muted">No themes</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% include 'inc/panels/tags.html' %}
+    {% include 'inc/panels/custom_fields.html' %}
+  </div>
+</div>
+{% endblock %}

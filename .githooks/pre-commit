@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Pre-commit gate: formatter check (black) + py_compile on the package.
+# Enable once per clone with:  git config core.hooksPath .githooks
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+PY="$(command -v python3 || command -v python)"
+
+# 1. Black formatter must pass with zero diff (line-length from pyproject.toml).
+if command -v black >/dev/null 2>&1; then
+  black --check netbox_wordpress
+else
+  echo "pre-commit: black not found — skipping format check (install black to enable)" >&2
+fi
+
+# 2. Every package .py must byte-compile.
+mapfile -t PYFILES < <(find netbox_wordpress -name '*.py')
+"$PY" -m py_compile "${PYFILES[@]}"
+
+echo "pre-commit: OK"
