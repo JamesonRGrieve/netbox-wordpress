@@ -16,6 +16,20 @@ class PluginSourceChoices(ChoiceSet):
     ]
 
 
+class PluginStateChoices(ChoiceSet):
+    """Declared install-state for a plugin or theme. ``absent`` means the component must NOT be
+    installed (drives cruft removal — e.g. retiring W3TC/LiteSpeed); the two present states mirror
+    the old ``is_active`` bool. Replacing the bool lets the SoT express removal, not just off."""
+    ABSENT = "absent"
+    PRESENT_INACTIVE = "present_inactive"
+    ACTIVE = "active"
+    CHOICES = [
+        (ABSENT, "Absent", "red"),
+        (PRESENT_INACTIVE, "Present (inactive)", "gray"),
+        (ACTIVE, "Active", "green"),
+    ]
+
+
 class WPConstantTypeChoices(ChoiceSet):
     """How a ``wp-config.php`` ``define()`` value is emitted: quoted string, bare bool/int, or raw PHP."""
     STRING = "string"

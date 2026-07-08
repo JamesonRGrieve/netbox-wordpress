@@ -67,7 +67,7 @@ a blob.
 | File | Responsibility |
 |------|----------------|
 | `__init__.py` | `PluginConfig` — name `netbox_wordpress`, `base_url='wordpress'`, min/max 4.6, `required_plugins` |
-| `choices.py` | `PluginSourceChoices`, `WPConstantTypeChoices`, `RelocationStateChoices`, `FPMProfileChoices` |
+| `choices.py` | `PluginSourceChoices`, `PluginStateChoices`, `WPConstantTypeChoices`, `RelocationStateChoices`, `FPMProfileChoices` |
 | `models.py` | the 5 models (see below) + `WordPressSite.clean()` exactly-one-host rule |
 | `migrations/0001_initial.py` | hand-authored (NetBox disables makemigrations in prod); verify with `makemigrations --check --dry-run` |
 | `api/serializers.py`, `api/views.py`, `api/urls.py` | REST (`NetBoxModelViewSet`) — the contract the tofu-wordpress provider reads |
@@ -79,13 +79,17 @@ a blob.
 ### Model — WordPress app-config SoT
 - **WordPressSite**: `name` (unique); host = exactly one of `device` (`dcim.Device`) /
   `virtual_machine` (`virtualization.VirtualMachine`), enforced by `clean()`; FK
-  `service_instance`, `database`, `db_user`; `site_url`, `wp_version`, `table_prefix` (`wp_`),
-  `is_multisite`, `fpm_profile` (low/medium/high), `wp_memory_limit`, `prod_hardening`,
-  `salt_ref` (OpenBao path). The five composed FKs are `PROTECT`.
+  `service_instance`, `object_cache_instance` (Valkey/Redis), `database`, `db_user`; `site_url`,
+  `wp_version`, `table_prefix` (`wp_`), `is_multisite`, `install_path` (WP core/Apache docroot),
+  `fpm_profile` (low/medium/high), `wp_memory_limit`, `prod_hardening`, `safe_opt` (PHP hardening),
+  `login_slug` (wps-hide-login whl_page), `trusted_proxies`, `enable_hsts`, `salt_ref` (OpenBao
+  path). The six composed FKs are `PROTECT`.
   - **WordPressConstant** (FK, CASCADE): `name`, `value`, `value_type`; unique `(site, name)`.
-  - **WordPressPlugin** (FK, CASCADE): `slug`, `version` (blank=latest), `is_active`, `source`
-    (wporg/url/zip), `source_url`; unique `(site, slug)`.
-  - **WordPressTheme** (FK, CASCADE): same shape as plugin; unique `(site, slug)`.
+  - **WordPressPlugin** (FK, CASCADE): `slug`, `version` (blank=latest), `state`
+    (absent/present_inactive/active — `absent` uninstalls), `source` (wporg/url/zip), `source_url`;
+    unique `(site, slug)`.
+  - **WordPressTheme** (FK, CASCADE): same shape as plugin (`state` default `present_inactive`);
+    unique `(site, slug)`.
   - **WordPressContentDirectory** (1:1, CASCADE): `content_dir`, `uploads_dir`,
     `target_content_dir`, `content_url`, `relocation_state` (in_place→relocating→relocated). SoT
     for the tofu-wordpress relocation contract (quiesce→move+verify→rewrite defines→symlink/health→rollback).

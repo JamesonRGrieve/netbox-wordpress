@@ -10,8 +10,8 @@
         <tr><th scope="row">URL</th><td>{{ object.site_url|placeholder }}</td></tr>
         <tr><th scope="row">Core version</th><td>{{ object.wp_version|placeholder }}</td></tr>
         <tr><th scope="row">Table prefix</th><td>{{ object.table_prefix }}</td></tr>
+        <tr><th scope="row">Install path</th><td>{{ object.install_path|placeholder }}</td></tr>
         <tr><th scope="row">Multisite</th><td>{% checkmark object.is_multisite %}</td></tr>
-        <tr><th scope="row">Prod hardening</th><td>{% checkmark object.prod_hardening %}</td></tr>
       </table>
     </div>
     <div class="card">
@@ -20,13 +20,24 @@
         <tr><th scope="row">Device</th><td>{{ object.device|linkify|placeholder }}</td></tr>
         <tr><th scope="row">Virtual machine</th><td>{{ object.virtual_machine|linkify|placeholder }}</td></tr>
         <tr><th scope="row">Service instance</th><td>{{ object.service_instance|linkify|placeholder }}</td></tr>
+        <tr><th scope="row">Object cache</th><td>{{ object.object_cache_instance|linkify|placeholder }}</td></tr>
       </table>
     </div>
     <div class="card">
-      <h2 class="card-header">Tuning &amp; secrets</h2>
+      <h2 class="card-header">Tuning</h2>
       <table class="table table-hover attr-table">
         <tr><th scope="row">FPM profile</th><td>{% if object.fpm_profile %}<span class="badge text-bg-{{ object.get_fpm_profile_color }}">{{ object.get_fpm_profile_display }}</span>{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
         <tr><th scope="row">WP memory limit</th><td>{{ object.wp_memory_limit|placeholder }}</td></tr>
+        <tr><th scope="row">Prod hardening</th><td>{% checkmark object.prod_hardening %}</td></tr>
+        <tr><th scope="row">Safe-opt (PHP)</th><td>{% checkmark object.safe_opt %}</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h2 class="card-header">Security &amp; secrets</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Login slug</th><td>{{ object.login_slug|placeholder }}</td></tr>
+        <tr><th scope="row">Trusted proxies</th><td>{{ object.trusted_proxies|placeholder }}</td></tr>
+        <tr><th scope="row">HSTS</th><td>{% checkmark object.enable_hsts %}</td></tr>
         <tr><th scope="row">Salt ref (OpenBao)</th><td>{{ object.salt_ref|placeholder }}</td></tr>
       </table>
     </div>
@@ -57,7 +68,7 @@
       <h2 class="card-header">Plugins</h2>
       <table class="table table-hover attr-table">
         {% for p in object.plugins.all %}
-        <tr><td>{{ p.slug|linkify }}</td><td>{{ p.version|placeholder }}</td><td>{% checkmark p.is_active %}</td></tr>
+        <tr><td>{{ p.slug|linkify }}</td><td>{{ p.version|placeholder }}</td><td><span class="badge text-bg-{{ p.get_state_color }}">{{ p.get_state_display }}</span></td></tr>
         {% empty %}
         <tr><td colspan="3" class="text-muted">No plugins</td></tr>
         {% endfor %}
@@ -67,7 +78,7 @@
       <h2 class="card-header">Themes</h2>
       <table class="table table-hover attr-table">
         {% for t in object.themes.all %}
-        <tr><td>{{ t.slug|linkify }}</td><td>{{ t.version|placeholder }}</td><td>{% checkmark t.is_active %}</td></tr>
+        <tr><td>{{ t.slug|linkify }}</td><td>{{ t.version|placeholder }}</td><td><span class="badge text-bg-{{ t.get_state_color }}">{{ t.get_state_display }}</span></td></tr>
         {% empty %}
         <tr><td colspan="3" class="text-muted">No themes</td></tr>
         {% endfor %}

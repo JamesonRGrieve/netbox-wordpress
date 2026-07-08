@@ -15,11 +15,13 @@ from django.urls import reverse
 from netbox.models import NetBoxModel
 
 from .choices import (
-    FPMProfileChoices, PluginSourceChoices, RelocationStateChoices, WPConstantTypeChoices,
+    FPMProfileChoices, PluginSourceChoices, PluginStateChoices, RelocationStateChoices,
+    WPConstantTypeChoices,
 )
 
 DEFAULT_TABLE_PREFIX = "wp_"
 DEFAULT_CONTENT_DIR = "/var/www/html/wp-content"
+DEFAULT_LOGIN_PATH = "wp-login.php"
 
 
 class WordPressSite(NetBoxModel):
@@ -69,6 +71,34 @@ class WordPressSite(NetBoxModel):
     )
     salt_ref = models.CharField(
         max_length=255, blank=True, help_text="OpenBao path for the AUTH salts — NEVER the salt values."
+    )
+    login_slug = models.CharField(
+        max_length=64, blank=True,
+        help_text="Hidden-login slug (wps-hide-login whl_page); blank = default wp-login.php.",
+    )
+    install_path = models.CharField(
+        max_length=255, blank=True,
+        help_text="WP core / Apache DocumentRoot path (e.g. /var/www/html); blank = provider docroot "
+        "default. A change is a whole-install relocation the provider performs safely.",
+    )
+    object_cache_instance = models.ForeignKey(
+        "netbox_services.ServiceInstance", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="wordpress_object_cache_sites",
+        help_text="Backing object-cache (Valkey/Redis) service instance; the WP_REDIS_* constants target it.",
+    )
+    safe_opt = models.BooleanField(
+        default=False,
+        help_text="PHP safe-opt hardening: disable_functions, allow_url_fopen off, Action Scheduler "
+        "async-runner off, OPcache.",
+    )
+    trusted_proxies = models.CharField(
+        max_length=255, blank=True,
+        help_text="Comma-separated trusted proxy IPs/CIDRs for mod_remoteip (e.g. the HAProxy IP); "
+        "applied when prod_hardening.",
+    )
+    enable_hsts = models.BooleanField(
+        default=False,
+        help_text="Emit the HSTS header — explicit per-site opt-in, only after the cert chain is confirmed.",
     )
 
     class Meta:
@@ -132,7 +162,10 @@ class WordPressPlugin(NetBoxModel):
     site = models.ForeignKey(WordPressSite, on_delete=models.CASCADE, related_name="plugins")
     slug = models.CharField(max_length=128, help_text="Plugin slug, e.g. woocommerce.")
     version = models.CharField(max_length=32, blank=True, help_text="Pinned version (blank = track latest).")
-    is_active = models.BooleanField(default=True, help_text="Plugin activated on the site.")
+    state = models.CharField(
+        max_length=16, choices=PluginStateChoices, default=PluginStateChoices.ACTIVE,
+        help_text="Declared install-state: absent (remove) / present_inactive / active.",
+    )
     source = models.CharField(
         max_length=8, choices=PluginSourceChoices, default=PluginSourceChoices.WPORG
     )
@@ -157,15 +190,22 @@ class WordPressPlugin(NetBoxModel):
     def get_source_color(self):
         return PluginSourceChoices.colors.get(self.source)
 
+    def get_state_color(self):
+        return PluginStateChoices.colors.get(self.state)
+
 
 class WordPressTheme(NetBoxModel):
-    """Declared install-state for one WordPress theme. Only one theme is active at a time on a site
-    (``is_active`` defaults False); ``source``/``source_url`` mirror :class:`WordPressPlugin`."""
+    """Declared install-state for one WordPress theme. Only one theme is ``active`` at a time on a
+    site (``state`` defaults ``present_inactive``); ``source``/``source_url`` mirror
+    :class:`WordPressPlugin`."""
 
     site = models.ForeignKey(WordPressSite, on_delete=models.CASCADE, related_name="themes")
     slug = models.CharField(max_length=128, help_text="Theme slug, e.g. twentytwentyfour.")
     version = models.CharField(max_length=32, blank=True, help_text="Pinned version (blank = track latest).")
-    is_active = models.BooleanField(default=False, help_text="Theme active (the site's current theme).")
+    state = models.CharField(
+        max_length=16, choices=PluginStateChoices, default=PluginStateChoices.PRESENT_INACTIVE,
+        help_text="Declared install-state: absent (remove) / present_inactive / active (current theme).",
+    )
     source = models.CharField(
         max_length=8, choices=PluginSourceChoices, default=PluginSourceChoices.WPORG
     )
@@ -189,6 +229,9 @@ class WordPressTheme(NetBoxModel):
 
     def get_source_color(self):
         return PluginSourceChoices.colors.get(self.source)
+
+    def get_state_color(self):
+        return PluginStateChoices.colors.get(self.state)
 
 
 class WordPressContentDirectory(NetBoxModel):

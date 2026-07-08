@@ -7,7 +7,9 @@ from django.db.utils import IntegrityError
 from django.test import TestCase
 from utilities.testing import create_test_device
 
-from netbox_wordpress.choices import PluginSourceChoices, RelocationStateChoices, WPConstantTypeChoices
+from netbox_wordpress.choices import (
+    PluginSourceChoices, PluginStateChoices, RelocationStateChoices, WPConstantTypeChoices,
+)
 from netbox_wordpress.models import (
     WordPressConstant, WordPressContentDirectory, WordPressPlugin, WordPressSite, WordPressTheme,
 )
@@ -24,8 +26,27 @@ class WordPressSiteModelTest(TestCase):
         self.assertEqual(s.table_prefix, "wp_")
         self.assertFalse(s.is_multisite)
         self.assertFalse(s.prod_hardening)
+        self.assertFalse(s.safe_opt)
+        self.assertFalse(s.enable_hsts)
+        self.assertEqual(s.login_slug, "")
+        self.assertEqual(s.install_path, "")
+        self.assertEqual(s.trusted_proxies, "")
+        self.assertIsNone(s.object_cache_instance)
         self.assertEqual(str(s), "blog")
         self.assertIn("/plugins/wordpress/sites/", s.get_absolute_url())
+
+    def test_security_and_tuning_fields_persist(self):
+        s = WordPressSite.objects.create(
+            name="hardened", device=create_test_device("d-hard"), login_slug="KzfYwpdC",
+            install_path="/var/www/html", safe_opt=True, prod_hardening=True, enable_hsts=True,
+            trusted_proxies="192.168.255.1,10.0.0.0/8",
+        )
+        s.refresh_from_db()
+        self.assertEqual(s.login_slug, "KzfYwpdC")
+        self.assertEqual(s.install_path, "/var/www/html")
+        self.assertTrue(s.safe_opt)
+        self.assertTrue(s.enable_hsts)
+        self.assertEqual(s.trusted_proxies, "192.168.255.1,10.0.0.0/8")
 
     def test_name_unique(self):
         WordPressSite.objects.create(name="dup", device=create_test_device("d-a"))
@@ -77,10 +98,16 @@ class WordPressPluginThemeModelTest(TestCase):
 
     def test_plugin_defaults_str_url(self):
         p = WordPressPlugin.objects.create(site=self.site, slug="woocommerce")
-        self.assertTrue(p.is_active)
+        self.assertEqual(p.state, PluginStateChoices.ACTIVE)
+        self.assertEqual(p.get_state_color(), "green")
         self.assertEqual(p.source, PluginSourceChoices.WPORG)
         self.assertEqual(str(p), f"{self.site}: woocommerce")
         self.assertIn("/plugins/wordpress/plugins/", p.get_absolute_url())
+
+    def test_plugin_absent_state(self):
+        p = WordPressPlugin.objects.create(site=self.site, slug="w3-total-cache", state=PluginStateChoices.ABSENT)
+        self.assertEqual(p.state, PluginStateChoices.ABSENT)
+        self.assertEqual(p.get_state_color(), "red")
 
     def test_plugin_unique_per_site_slug(self):
         WordPressPlugin.objects.create(site=self.site, slug="jetpack")
@@ -89,7 +116,8 @@ class WordPressPluginThemeModelTest(TestCase):
 
     def test_theme_defaults_and_url(self):
         t = WordPressTheme.objects.create(site=self.site, slug="twentytwentyfour", source=PluginSourceChoices.ZIP, source_url="https://example.com/t.zip")
-        self.assertFalse(t.is_active)
+        self.assertEqual(t.state, PluginStateChoices.PRESENT_INACTIVE)
+        self.assertEqual(t.get_state_color(), "gray")
         self.assertEqual(t.get_source_color(), "gray")
         self.assertEqual(str(t), f"{self.site}: twentytwentyfour")
         self.assertIn("/plugins/wordpress/themes/", t.get_absolute_url())

@@ -4,6 +4,8 @@
 Composes the explicit CRUD mixins (not the GraphQL-inclusive APIViewTestCase) since the plugin
 ships no GraphQL type yet. WordPressSite host-binds to a fresh device per row; WordPressContentDirectory
 is 1:1 to a site, so each create_data row targets a fresh site."""
+import unittest
+
 from utilities.testing import APIViewTestCases, create_test_device
 
 from netbox_wordpress.models import (
@@ -19,7 +21,18 @@ class _CRUD(
     APIViewTestCases.UpdateObjectViewTestCase,
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
-    pass
+    # Plugin API views register under the `plugins-api:<app_label>-api` namespace;
+    # without this override the test base reverses `<app_label>-api:…` (no
+    # `plugins-api` prefix) → NoReverseMatch. See utilities/testing/api.py.
+    view_namespace = "plugins-api:netbox_wordpress"
+
+    @classmethod
+    def setUpClass(cls):
+        # _CRUD is an abstract base (no `model`); Django's test loader still
+        # collects it. Skip it so only the concrete subclasses run.
+        if cls is _CRUD:
+            raise unittest.SkipTest("abstract API test base")
+        super().setUpClass()
 
 
 class WordPressSiteAPITest(_CRUD):
@@ -34,16 +47,18 @@ class WordPressSiteAPITest(_CRUD):
         ])
         new = [create_test_device(f"hn-{i}") for i in range(3)]
         cls.create_data = [
-            {"name": "shop", "device": new[0].pk, "site_url": "https://shop.example", "wp_version": "6.5", "fpm_profile": "high"},
-            {"name": "brochure", "device": new[1].pk, "table_prefix": "bx_", "is_multisite": True},
-            {"name": "hardened", "device": new[2].pk, "prod_hardening": True, "salt_ref": "wp/salts/hardened"},
+            {"name": "shop", "device": new[0].pk, "site_url": "https://shop.example", "wp_version": "6.5", "fpm_profile": "high", "safe_opt": True},
+            {"name": "brochure", "device": new[1].pk, "table_prefix": "bx_", "is_multisite": True, "install_path": "/var/www/html"},
+            {"name": "hardened", "device": new[2].pk, "prod_hardening": True, "salt_ref": "wp/salts/hardened", "login_slug": "KzfYwpdC", "trusted_proxies": "10.0.0.1", "enable_hsts": True},
         ]
 
 
 class WordPressConstantAPITest(_CRUD):
     model = WordPressConstant
     brief_fields = ["display", "id", "name", "url", "value"]
-    bulk_update_data = {"value_type": "bool"}
+    # "raw" — a value_type none of the seed constants already has, so every row
+    # actually changes (the bulk-update test asserts len(changes) == len(data)).
+    bulk_update_data = {"value_type": "raw"}
 
     @classmethod
     def setUpTestData(cls):
@@ -63,7 +78,7 @@ class WordPressConstantAPITest(_CRUD):
 class WordPressPluginAPITest(_CRUD):
     model = WordPressPlugin
     brief_fields = ["display", "id", "slug", "url", "version"]
-    bulk_update_data = {"is_active": False}
+    bulk_update_data = {"state": "present_inactive"}
 
     @classmethod
     def setUpTestData(cls):
@@ -74,28 +89,29 @@ class WordPressPluginAPITest(_CRUD):
             WordPressPlugin(site=site, slug="redis-cache", source="zip", source_url="https://example.com/redis.zip"),
         ])
         cls.create_data = [
-            {"site": site.pk, "slug": "jetpack", "version": "13.0", "is_active": True, "source": "wporg"},
+            {"site": site.pk, "slug": "jetpack", "version": "13.0", "state": "active", "source": "wporg"},
             {"site": site.pk, "slug": "custom", "source": "url", "source_url": "https://example.com/custom.zip"},
-            {"site": site.pk, "slug": "yoast", "is_active": False},
+            {"site": site.pk, "slug": "w3-total-cache", "state": "absent"},
         ]
 
 
 class WordPressThemeAPITest(_CRUD):
     model = WordPressTheme
     brief_fields = ["display", "id", "slug", "url", "version"]
-    bulk_update_data = {"is_active": True}
+    # "absent" — a state none of the seed themes already has, so every row changes.
+    bulk_update_data = {"state": "absent"}
 
     @classmethod
     def setUpTestData(cls):
         site = create_wp_site("theme-api")
         WordPressTheme.objects.bulk_create([
-            WordPressTheme(site=site, slug="twentytwentyfour", is_active=True),
+            WordPressTheme(site=site, slug="twentytwentyfour", state="active"),
             WordPressTheme(site=site, slug="astra"),
             WordPressTheme(site=site, slug="custom", source="zip", source_url="https://example.com/theme.zip"),
         ])
         cls.create_data = [
             {"site": site.pk, "slug": "generatepress", "version": "3.4", "source": "wporg"},
-            {"site": site.pk, "slug": "kadence", "is_active": False},
+            {"site": site.pk, "slug": "kadence", "state": "present_inactive"},
             {"site": site.pk, "slug": "hello-elementor", "source": "url", "source_url": "https://example.com/h.zip"},
         ]
 

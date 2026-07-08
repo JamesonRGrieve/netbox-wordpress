@@ -3,7 +3,10 @@
 from django.test import TestCase
 from utilities.testing import create_test_device
 
-from netbox_wordpress.choices import FPMProfileChoices, PluginSourceChoices, RelocationStateChoices, WPConstantTypeChoices
+from netbox_wordpress.choices import (
+    FPMProfileChoices, PluginSourceChoices, PluginStateChoices, RelocationStateChoices,
+    WPConstantTypeChoices,
+)
 from netbox_wordpress.filtersets import (
     WordPressConstantFilterSet, WordPressContentDirectoryFilterSet, WordPressPluginFilterSet,
     WordPressSiteFilterSet, WordPressThemeFilterSet,
@@ -21,7 +24,7 @@ class WordPressSiteFilterSetTest(TestCase):
     def setUpTestData(cls):
         cls.d1 = create_test_device("dev1")
         cls.d2 = create_test_device("dev2")
-        WordPressSite.objects.create(name="alpha", device=cls.d1, fpm_profile=FPMProfileChoices.LOW, is_multisite=True)
+        WordPressSite.objects.create(name="alpha", device=cls.d1, fpm_profile=FPMProfileChoices.LOW, is_multisite=True, safe_opt=True, enable_hsts=True)
         WordPressSite.objects.create(name="bravo", device=cls.d2, fpm_profile=FPMProfileChoices.HIGH)
 
     def test_device_id_scopes(self):
@@ -32,6 +35,12 @@ class WordPressSiteFilterSetTest(TestCase):
 
     def test_is_multisite(self):
         self.assertEqual(WordPressSiteFilterSet({"is_multisite": True}, self.queryset).qs.count(), 1)
+
+    def test_safe_opt(self):
+        self.assertEqual(WordPressSiteFilterSet({"safe_opt": True}, self.queryset).qs.count(), 1)
+
+    def test_enable_hsts(self):
+        self.assertEqual(WordPressSiteFilterSet({"enable_hsts": True}, self.queryset).qs.count(), 1)
 
     def test_search(self):
         self.assertEqual(WordPressSiteFilterSet({"q": "alpha"}, self.queryset).qs.count(), 1)
@@ -68,9 +77,9 @@ class WordPressPluginFilterSetTest(TestCase):
         cls.s1 = create_wp_site("p1")
         cls.s2 = create_wp_site("p2")
         WordPressPlugin.objects.bulk_create([
-            WordPressPlugin(site=cls.s1, slug="woocommerce", source=PluginSourceChoices.WPORG, is_active=True),
-            WordPressPlugin(site=cls.s1, slug="redis-cache", source=PluginSourceChoices.ZIP, is_active=False),
-            WordPressPlugin(site=cls.s2, slug="jetpack", source=PluginSourceChoices.WPORG, is_active=True),
+            WordPressPlugin(site=cls.s1, slug="woocommerce", source=PluginSourceChoices.WPORG, state=PluginStateChoices.ACTIVE),
+            WordPressPlugin(site=cls.s1, slug="w3-total-cache", source=PluginSourceChoices.ZIP, state=PluginStateChoices.ABSENT),
+            WordPressPlugin(site=cls.s2, slug="jetpack", source=PluginSourceChoices.WPORG, state=PluginStateChoices.ACTIVE),
         ])
 
     def test_site_id_scopes(self):
@@ -79,8 +88,11 @@ class WordPressPluginFilterSetTest(TestCase):
     def test_source(self):
         self.assertEqual(WordPressPluginFilterSet({"source": [PluginSourceChoices.ZIP]}, self.queryset).qs.count(), 1)
 
-    def test_is_active(self):
-        self.assertEqual(WordPressPluginFilterSet({"is_active": True}, self.queryset).qs.count(), 2)
+    def test_state_active(self):
+        self.assertEqual(WordPressPluginFilterSet({"state": [PluginStateChoices.ACTIVE]}, self.queryset).qs.count(), 2)
+
+    def test_state_absent(self):
+        self.assertEqual(WordPressPluginFilterSet({"state": [PluginStateChoices.ABSENT]}, self.queryset).qs.count(), 1)
 
     def test_search(self):
         self.assertEqual(WordPressPluginFilterSet({"q": "woocommerce"}, self.queryset).qs.count(), 1)
@@ -94,8 +106,8 @@ class WordPressThemeFilterSetTest(TestCase):
         cls.s1 = create_wp_site("t1")
         cls.s2 = create_wp_site("t2")
         WordPressTheme.objects.bulk_create([
-            WordPressTheme(site=cls.s1, slug="twentytwentyfour", is_active=True),
-            WordPressTheme(site=cls.s1, slug="astra", is_active=False),
+            WordPressTheme(site=cls.s1, slug="twentytwentyfour", state=PluginStateChoices.ACTIVE),
+            WordPressTheme(site=cls.s1, slug="astra", state=PluginStateChoices.PRESENT_INACTIVE),
             WordPressTheme(site=cls.s2, slug="kadence", source=PluginSourceChoices.ZIP),
         ])
 

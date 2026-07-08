@@ -24,14 +24,15 @@ change-logged NetBox object instead of living in `wp-config.php`, playbook comme
               ┌───┴─────────────┴───────┴──────────────────────────────────────┐
               │                      WordPressSite                              │
               │  name(unique) site_url wp_version table_prefix is_multisite     │
-              │  fpm_profile wp_memory_limit prod_hardening salt_ref(OpenBao)   │
+              │  install_path fpm_profile wp_memory_limit prod_hardening        │
+              │  safe_opt login_slug trusted_proxies enable_hsts salt_ref(Bao)  │
               └───┬───────────────┬──────────────────┬───────────────┬─────────┘
         constants │        plugins │           themes │  content_dir  │ (1:1)
           (FK)    │          (FK)  │            (FK)   │      (O2O)    │
      ┌────────────▼──┐ ┌───────────▼──┐ ┌──────────────▼┐ ┌────────────▼──────────────┐
      │WordPressConst.│ │WordPressPlugin│ │WordPressTheme │ │ WordPressContentDirectory │
      │ name value    │ │ slug version  │ │ slug version  │ │ content_dir uploads_dir   │
-     │ value_type    │ │ is_active     │ │ is_active     │ │ target_content_dir        │
+     │ value_type    │ │ state         │ │ state         │ │ target_content_dir        │
      │ U(site,name)  │ │ source src_url│ │ source src_url│ │ content_url               │
      │               │ │ U(site,slug)  │ │ U(site,slug)  │ │ relocation_state          │
      └───────────────┘ └───────────────┘ └───────────────┘ └───────────────────────────┘
@@ -79,6 +80,32 @@ tier is now a queryable field the reconciler reads, not a comment an operator mu
 copy into host_vars. `prod_hardening` is the single umbrella toggle from the playbook that flips
 the whole production server-security layer (`FORCE_SSL_ADMIN`, fail2ban, mod_remoteip, unattended
 upgrades, AIDE, rkhunter).
+
+## 3a. Per-site security, login, docroot & cache — the values a bool can't hold
+
+The hardening layer is not purely a switch — it carries per-site values and infra-load-bearing
+knobs the fleet records in `host_vars` today. These are promoted to typed `WordPressSite` fields so
+the provider and the login/health checks read one SoT:
+
+- **`login_slug`** — the wps-hide-login `whl_page` (a plugin *option*, not install-state). The login
+  health check must hit this slug; keeping it here removes the split-brain where NetBox owned the
+  site but `host_vars` owned the slug. Blank ⇒ default `wp-login.php`.
+- **`install_path`** — the WP core / Apache `DocumentRoot` (e.g. `/var/www/html`). The fleet's tteck
+  CTs install at `/var/www/html/wordpress`; normalizing to `/var/www/html` is a **whole-install
+  relocation** distinct from the `wp-content` move in §5 — the provider performs it safely (quiesce →
+  move core → repoint the vhost + WP_HOME/SITEURL → health → rollback). Blank ⇒ the provider docroot
+  default.
+- **`safe_opt`** — the PHP execution-hardening layer (`disable_functions`, `allow_url_fopen` off,
+  Action Scheduler `async-runner` off, OPcache), matching the playbook's `wordpress_safe_opt`. A
+  distinct concern from `prod_hardening` (server security), so a distinct toggle.
+- **`trusted_proxies`** — comma-separated proxy IPs/CIDRs for `mod_remoteip` (e.g. the HAProxy IP);
+  applied under `prod_hardening`. A bool can't carry the address, so it is its own field.
+- **`enable_hsts`** — an **explicit per-site opt-in** (default off). Turning HSTS on before the cert
+  chain is proven is a footgun, so it never rides the `prod_hardening` bool.
+- **`object_cache_instance`** — a `PROTECT` FK to the backing Valkey/Redis
+  `netbox_services.ServiceInstance`. The `WP_REDIS_*` constants still carry the address for the
+  provider, but the FK makes the cache backend a first-class, queryable relationship (you cannot
+  delete a cache instance a site still points at).
 
 ## 4. wp-config constants — typed fields vs rows
 
@@ -142,9 +169,11 @@ OpenBao path). NetBox holds structure; OpenBao holds secrets.
 `tofu-wordpress` is the downstream consumer. It reads the REST API (`/api/plugins/wordpress/…`)
 as the single source of truth: `WordPressSite` (host + service + DB + tuning) → renders the FPM
 pool + `wp-config.php`; `WordPressConstant` rows → the long-tail `define()`s; `WordPressPlugin`
-/ `WordPressTheme` → `wp plugin/theme install` install-state; `WordPressContentDirectory` →
-drives the relocation state machine in §5. HA reconciliation reads `netbox_services.HAMirror`,
-not this plugin.
+/ `WordPressTheme` `state` → `wp plugin/theme` install-state — `active` installs+activates,
+`present_inactive` installs+deactivates, and **`absent` uninstalls** (so the SoT can retire cruft
+like W3TC/LiteSpeed, not merely leave it off); `WordPressContentDirectory` → drives the
+`wp-content` relocation state machine in §5, and `WordPressSite.install_path` → the whole-install /
+Apache-docroot relocation (§3a). HA reconciliation reads `netbox_services.HAMirror`, not this plugin.
 
 ## 8. Verification owed
 

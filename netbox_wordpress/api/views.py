@@ -13,7 +13,8 @@ from .serializers import (
 
 class WordPressSiteViewSet(NetBoxModelViewSet):
     queryset = WordPressSite.objects.prefetch_related(
-        "device", "virtual_machine", "service_instance", "database", "db_user", "tags"
+        "device", "virtual_machine", "service_instance", "object_cache_instance", "database",
+        "db_user", "tags",
     )
     serializer_class = WordPressSiteSerializer
     filterset_class = filtersets.WordPressSiteFilterSet

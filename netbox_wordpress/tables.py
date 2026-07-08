@@ -11,17 +11,22 @@ class WordPressSiteTable(NetBoxTable):
     name = tables.Column(linkify=True)
     device = tables.Column(linkify=True)
     virtual_machine = tables.Column(linkify=True)
+    object_cache_instance = tables.Column(linkify=True)
     is_multisite = columns.BooleanColumn()
     fpm_profile = columns.ChoiceFieldColumn()
     prod_hardening = columns.BooleanColumn()
+    safe_opt = columns.BooleanColumn()
+    enable_hsts = columns.BooleanColumn()
     tags = columns.TagColumn(url_name="plugins:netbox_wordpress:wordpresssite_list")
 
     class Meta(NetBoxTable.Meta):
         model = WordPressSite
         fields = (
-            "pk", "id", "name", "device", "virtual_machine", "service_instance", "site_url",
-            "wp_version", "table_prefix", "is_multisite", "database", "db_user", "fpm_profile",
-            "wp_memory_limit", "prod_hardening", "salt_ref", "tags", "created", "last_updated",
+            "pk", "id", "name", "device", "virtual_machine", "service_instance",
+            "object_cache_instance", "site_url", "wp_version", "table_prefix", "is_multisite",
+            "install_path", "database", "db_user", "fpm_profile", "wp_memory_limit", "prod_hardening",
+            "safe_opt", "login_slug", "trusted_proxies", "enable_hsts", "salt_ref", "tags",
+            "created", "last_updated",
         )
         default_columns = ("name", "site_url", "wp_version", "is_multisite", "fpm_profile")
 
@@ -41,27 +46,27 @@ class WordPressConstantTable(NetBoxTable):
 class WordPressPluginTable(NetBoxTable):
     site = tables.Column(linkify=True)
     slug = tables.Column(linkify=True)
-    is_active = columns.BooleanColumn()
+    state = columns.ChoiceFieldColumn()
     source = columns.ChoiceFieldColumn()
     tags = columns.TagColumn(url_name="plugins:netbox_wordpress:wordpressplugin_list")
 
     class Meta(NetBoxTable.Meta):
         model = WordPressPlugin
-        fields = ("pk", "id", "site", "slug", "version", "is_active", "source", "source_url", "tags", "created", "last_updated")
-        default_columns = ("site", "slug", "version", "is_active", "source")
+        fields = ("pk", "id", "site", "slug", "version", "state", "source", "source_url", "tags", "created", "last_updated")
+        default_columns = ("site", "slug", "version", "state", "source")
 
 
 class WordPressThemeTable(NetBoxTable):
     site = tables.Column(linkify=True)
     slug = tables.Column(linkify=True)
-    is_active = columns.BooleanColumn()
+    state = columns.ChoiceFieldColumn()
     source = columns.ChoiceFieldColumn()
     tags = columns.TagColumn(url_name="plugins:netbox_wordpress:wordpresstheme_list")
 
     class Meta(NetBoxTable.Meta):
         model = WordPressTheme
-        fields = ("pk", "id", "site", "slug", "version", "is_active", "source", "source_url", "tags", "created", "last_updated")
-        default_columns = ("site", "slug", "version", "is_active", "source")
+        fields = ("pk", "id", "site", "slug", "version", "state", "source", "source_url", "tags", "created", "last_updated")
+        default_columns = ("site", "slug", "version", "state", "source")
 
 
 class WordPressContentDirectoryTable(NetBoxTable):

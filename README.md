@@ -25,14 +25,18 @@ plugin only references them by FK.
 
 - **WordPressSite** — the install. Host-bound to exactly one of a `dcim.Device` or a
   `virtualization.VirtualMachine` (enforced by `clean()`). Links `service_instance`,
-  `database`, `db_user`. Typed per-site knobs: `site_url`, `wp_version`, `table_prefix`,
-  `is_multisite`, `fpm_profile` (low/medium/high), `wp_memory_limit`, `prod_hardening`,
-  `salt_ref` (OpenBao path — never the salts).
+  `object_cache_instance` (Valkey/Redis), `database`, `db_user`. Typed per-site knobs: `site_url`,
+  `wp_version`, `table_prefix`, `is_multisite`, `install_path` (WP core / Apache docroot),
+  `fpm_profile` (low/medium/high), `wp_memory_limit`, `prod_hardening`, `safe_opt` (PHP hardening),
+  `login_slug` (wps-hide-login), `trusted_proxies`, `enable_hsts`, `salt_ref` (OpenBao path —
+  never the salts).
   - **WordPressConstant** (FK) — a single `wp-config.php` `define()` (`name`, `value`,
     `value_type`); unique per `(site, name)`. The long tail beyond the typed fields.
-  - **WordPressPlugin** (FK) — `slug`, `version` (blank = latest), `is_active`, `source`
-    (wporg/url/zip), `source_url`; unique per `(site, slug)`.
-  - **WordPressTheme** (FK) — same shape as plugin; unique per `(site, slug)`.
+  - **WordPressPlugin** (FK) — `slug`, `version` (blank = latest), `state`
+    (absent / present_inactive / active — `absent` uninstalls), `source` (wporg/url/zip),
+    `source_url`; unique per `(site, slug)`.
+  - **WordPressTheme** (FK) — same shape as plugin (`state` default `present_inactive`); unique
+    per `(site, slug)`.
   - **WordPressContentDirectory** (1:1) — the SoT for the tofu-wordpress content-relocation
     feature: `content_dir`, `uploads_dir`, `target_content_dir`, `content_url`,
     `relocation_state` (in_place → relocating → relocated).

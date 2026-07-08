@@ -14,8 +14,9 @@ class WordPressSiteSerializer(NetBoxModelSerializer):
         model = WordPressSite
         fields = [
             "id", "url", "display", "name", "device", "virtual_machine", "service_instance",
-            "site_url", "wp_version", "table_prefix", "is_multisite", "database", "db_user",
-            "fpm_profile", "wp_memory_limit", "prod_hardening", "salt_ref",
+            "object_cache_instance", "site_url", "wp_version", "table_prefix", "is_multisite",
+            "install_path", "database", "db_user", "fpm_profile", "wp_memory_limit", "prod_hardening",
+            "safe_opt", "login_slug", "trusted_proxies", "enable_hsts", "salt_ref",
             "tags", "custom_fields", "created", "last_updated",
         ]
         brief_fields = ["id", "url", "display", "name", "site_url"]
@@ -41,7 +42,7 @@ class WordPressPluginSerializer(NetBoxModelSerializer):
     class Meta:
         model = WordPressPlugin
         fields = [
-            "id", "url", "display", "site", "slug", "version", "is_active", "source", "source_url",
+            "id", "url", "display", "site", "slug", "version", "state", "source", "source_url",
             "tags", "custom_fields", "created", "last_updated",
         ]
         brief_fields = ["id", "url", "display", "slug", "version"]
@@ -54,7 +55,7 @@ class WordPressThemeSerializer(NetBoxModelSerializer):
     class Meta:
         model = WordPressTheme
         fields = [
-            "id", "url", "display", "site", "slug", "version", "is_active", "source", "source_url",
+            "id", "url", "display", "site", "slug", "version", "state", "source", "source_url",
             "tags", "custom_fields", "created", "last_updated",
         ]
         brief_fields = ["id", "url", "display", "slug", "version"]
