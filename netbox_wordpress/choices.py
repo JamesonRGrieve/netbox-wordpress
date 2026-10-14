@@ -44,6 +44,16 @@ class WPConstantTypeChoices(ChoiceSet):
     ]
 
 
+class WPOptionFormatChoices(ChoiceSet):
+    """How a ``wp_options`` value is written: a scalar string, or JSON for a structured (serialized) value."""
+    STRING = "string"
+    JSON = "json"
+    CHOICES = [
+        (STRING, "String", "blue"),
+        (JSON, "JSON", "purple"),
+    ]
+
+
 class RelocationStateChoices(ChoiceSet):
     """Lifecycle of the WP content-directory relocation the tofu-wordpress provider performs."""
     IN_PLACE = "in_place"

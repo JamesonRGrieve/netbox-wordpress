@@ -83,8 +83,11 @@ a blob.
   `wp_version`, `table_prefix` (`wp_`), `is_multisite`, `install_path` (WP core/Apache docroot),
   `fpm_profile` (low/medium/high), `wp_memory_limit`, `prod_hardening`, `safe_opt` (PHP hardening),
   `login_slug` (wps-hide-login whl_page), `trusted_proxies`, `enable_hsts`, `salt_ref` (OpenBao
-  path). The six composed FKs are `PROTECT`.
+  path), `site_icon_url` (source image for the Site Icon). The six composed FKs are `PROTECT`.
   - **WordPressConstant** (FK, CASCADE): `name`, `value`, `value_type`; unique `(site, name)`.
+  - **WordPressOption** (FK, CASCADE): `name`, `key_path` (blank = whole option; dotted = one
+    nested key via `wp option patch`), `value`, `value_format` (string/json; json must parse,
+    enforced by `clean()`); unique `(site, name, key_path)`.
   - **WordPressPlugin** (FK, CASCADE): `slug`, `version` (blank=latest), `state`
     (absent/present_inactive/active — `absent` uninstalls), `source` (wporg/url/zip), `source_url`;
     unique `(site, slug)`.

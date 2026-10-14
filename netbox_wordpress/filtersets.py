@@ -9,10 +9,11 @@ from virtualization.models import VirtualMachine
 
 from .choices import (
     FPMProfileChoices, PluginSourceChoices, PluginStateChoices, RelocationStateChoices,
-    WPConstantTypeChoices,
+    WPConstantTypeChoices, WPOptionFormatChoices,
 )
 from .models import (
-    WordPressConstant, WordPressContentDirectory, WordPressPlugin, WordPressSite, WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
+    WordPressTheme,
 )
 
 # Explicit FK filters: django-filter does NOT derive `<fk>_id` from a bare FK in Meta.fields,
@@ -47,7 +48,7 @@ class WordPressSiteFilterSet(NetBoxModelFilterSet):
         fields = [
             "id", "name", "site_url", "wp_version", "table_prefix", "is_multisite",
             "install_path", "wp_memory_limit", "prod_hardening", "safe_opt", "login_slug",
-            "trusted_proxies", "enable_hsts", "salt_ref",
+            "trusted_proxies", "enable_hsts", "salt_ref", "site_icon_url",
         ]
 
     def search(self, queryset, name, value):
@@ -65,6 +66,19 @@ class WordPressConstantFilterSet(_SiteFilterMixin):
 
     def search(self, queryset, name, value):
         return queryset.filter(Q(name__icontains=value) | Q(value__icontains=value))
+
+
+class WordPressOptionFilterSet(_SiteFilterMixin):
+    value_format = django_filters.MultipleChoiceFilter(choices=WPOptionFormatChoices)
+
+    class Meta:
+        model = WordPressOption
+        fields = ["id", "name", "key_path"]
+
+    def search(self, queryset, name, value):
+        return queryset.filter(
+            Q(name__icontains=value) | Q(key_path__icontains=value) | Q(value__icontains=value)
+        )
 
 
 class WordPressPluginFilterSet(_SiteFilterMixin):

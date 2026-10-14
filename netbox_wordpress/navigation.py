@@ -24,7 +24,7 @@ menu = PluginMenu(
                 _item("wordpresscontentdirectory", "Content Dirs"),
             ),
         ),
-        ("Config", (_item("wordpressconstant", "Constants"),)),
+        ("Config", (_item("wordpressconstant", "Constants"), _item("wordpressoption", "Options"))),
     ),
     icon_class="mdi mdi-wordpress",
 )

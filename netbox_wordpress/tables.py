@@ -3,7 +3,8 @@ import django_tables2 as tables
 from netbox.tables import NetBoxTable, columns
 
 from .models import (
-    WordPressConstant, WordPressContentDirectory, WordPressPlugin, WordPressSite, WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
+    WordPressTheme,
 )
 
 
@@ -25,7 +26,7 @@ class WordPressSiteTable(NetBoxTable):
             "pk", "id", "name", "device", "virtual_machine", "service_instance",
             "object_cache_instance", "site_url", "wp_version", "table_prefix", "is_multisite",
             "install_path", "database", "db_user", "fpm_profile", "wp_memory_limit", "prod_hardening",
-            "safe_opt", "login_slug", "trusted_proxies", "enable_hsts", "salt_ref", "tags",
+            "safe_opt", "login_slug", "trusted_proxies", "enable_hsts", "salt_ref", "site_icon_url", "tags",
             "created", "last_updated",
         )
         default_columns = ("name", "site_url", "wp_version", "is_multisite", "fpm_profile")
@@ -41,6 +42,18 @@ class WordPressConstantTable(NetBoxTable):
         model = WordPressConstant
         fields = ("pk", "id", "site", "name", "value", "value_type", "tags", "created", "last_updated")
         default_columns = ("site", "name", "value", "value_type")
+
+
+class WordPressOptionTable(NetBoxTable):
+    site = tables.Column(linkify=True)
+    name = tables.Column(linkify=True)
+    value_format = columns.ChoiceFieldColumn()
+    tags = columns.TagColumn(url_name="plugins:netbox_wordpress:wordpressoption_list")
+
+    class Meta(NetBoxTable.Meta):
+        model = WordPressOption
+        fields = ("pk", "id", "site", "name", "key_path", "value", "value_format", "tags", "created", "last_updated")
+        default_columns = ("site", "name", "key_path", "value", "value_format")
 
 
 class WordPressPluginTable(NetBoxTable):

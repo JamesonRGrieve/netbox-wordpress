@@ -168,7 +168,10 @@ OpenBao path). NetBox holds structure; OpenBao holds secrets.
 
 `tofu-wordpress` is the downstream consumer. It reads the REST API (`/api/plugins/wordpress/…`)
 as the single source of truth: `WordPressSite` (host + service + DB + tuning) → renders the FPM
-pool + `wp-config.php`; `WordPressConstant` rows → the long-tail `define()`s; `WordPressPlugin`
+pool + `wp-config.php`; `WordPressConstant` rows → the long-tail `define()`s; `WordPressOption`
+rows → `wp option update` (whole option) or `wp option patch update` (one nested key, leaving the
+rest of a plugin's settings array alone); `WordPressSite.site_icon_url` → a media import plus the
+`site_icon` option; `WordPressPlugin`
 / `WordPressTheme` `state` → `wp plugin/theme` install-state — `active` installs+activates,
 `present_inactive` installs+deactivates, and **`absent` uninstalls** (so the SoT can retire cruft
 like W3TC/LiteSpeed, not merely leave it off); `WordPressContentDirectory` → drives the

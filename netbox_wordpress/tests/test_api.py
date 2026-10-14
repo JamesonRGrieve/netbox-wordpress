@@ -9,7 +9,8 @@ import unittest
 from utilities.testing import APIViewTestCases, create_test_device
 
 from netbox_wordpress.models import (
-    WordPressConstant, WordPressContentDirectory, WordPressPlugin, WordPressSite, WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
+    WordPressTheme,
 )
 from netbox_wordpress.tests.utils import create_wp_site
 
@@ -49,7 +50,7 @@ class WordPressSiteAPITest(_CRUD):
         cls.create_data = [
             {"name": "shop", "device": new[0].pk, "site_url": "https://shop.example", "wp_version": "6.5", "fpm_profile": "high", "safe_opt": True},
             {"name": "brochure", "device": new[1].pk, "table_prefix": "bx_", "is_multisite": True, "install_path": "/var/www/html"},
-            {"name": "hardened", "device": new[2].pk, "prod_hardening": True, "salt_ref": "wp/salts/hardened", "login_slug": "KzfYwpdC", "trusted_proxies": "10.0.0.1", "enable_hsts": True},
+            {"name": "hardened", "device": new[2].pk, "prod_hardening": True, "salt_ref": "wp/salts/hardened", "login_slug": "KzfYwpdC", "trusted_proxies": "10.0.0.1", "enable_hsts": True, "site_icon_url": "https://cdn.example/hardened-512.png"},
         ]
 
 
@@ -73,6 +74,37 @@ class WordPressConstantAPITest(_CRUD):
             {"site": site.pk, "name": "WP_AUTO_UPDATE_CORE", "value": "minor", "value_type": "string"},
             {"site": site.pk, "name": "EMPTY_TRASH_DAYS", "value": "7", "value_type": "int"},
         ]
+
+
+class WordPressOptionAPITest(_CRUD):
+    model = WordPressOption
+    brief_fields = ["display", "id", "key_path", "name", "url", "value"]
+    # "json" with a JSON-valid value — every seed row is "string", so each row actually changes.
+    bulk_update_data = {"value_format": "json", "value": "true"}
+
+    @classmethod
+    def setUpTestData(cls):
+        site = create_wp_site("option-api")
+        WordPressOption.objects.bulk_create([
+            WordPressOption(site=site, name="blog_public", value="1"),
+            WordPressOption(site=site, name="blogdescription", value="Just another site"),
+            WordPressOption(site=site, name="wpseo", key_path="enable_xml_sitemap", value="1"),
+        ])
+        cls.create_data = [
+            {"site": site.pk, "name": "wpseo", "key_path": "disableadvanced_meta", "value": "false", "value_format": "json"},
+            {"site": site.pk, "name": "permalink_structure", "value": "/%postname%/"},
+            {"site": site.pk, "name": "wpseo_titles", "key_path": "noindex-page", "value": "false", "value_format": "json"},
+        ]
+
+    def test_json_value_must_parse(self):
+        self.add_permissions("netbox_wordpress.add_wordpressoption")
+        site = WordPressSite.objects.get(name="option-api")
+        resp = self.client.post(
+            self._get_list_url(),
+            {"site": site.pk, "name": "bad", "value": "{oops", "value_format": "json"},
+            format="json", **self.header,
+        )
+        self.assertHttpStatus(resp, 400)
 
 
 class WordPressPluginAPITest(_CRUD):

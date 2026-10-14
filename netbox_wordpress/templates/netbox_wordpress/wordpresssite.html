@@ -12,6 +12,7 @@
         <tr><th scope="row">Table prefix</th><td>{{ object.table_prefix }}</td></tr>
         <tr><th scope="row">Install path</th><td>{{ object.install_path|placeholder }}</td></tr>
         <tr><th scope="row">Multisite</th><td>{% checkmark object.is_multisite %}</td></tr>
+        <tr><th scope="row">Site icon source</th><td>{{ object.site_icon_url|placeholder }}</td></tr>
       </table>
     </div>
     <div class="card">
@@ -62,6 +63,16 @@
         <tr><td colspan="2" class="text-muted">No content directory record</td></tr>
         {% endif %}
         {% endwith %}
+      </table>
+    </div>
+    <div class="card">
+      <h2 class="card-header">Options</h2>
+      <table class="table table-hover attr-table">
+        {% for o in object.options.all %}
+        <tr><td><a href="{{ o.get_absolute_url }}">{{ o.name }}{% if o.key_path %}.{{ o.key_path }}{% endif %}</a></td><td><code>{{ o.value|truncatechars:60 }}</code></td></tr>
+        {% empty %}
+        <tr><td colspan="2" class="text-muted">No options</td></tr>
+        {% endfor %}
       </table>
     </div>
     <div class="card">

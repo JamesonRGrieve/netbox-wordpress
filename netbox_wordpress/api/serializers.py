@@ -3,7 +3,8 @@ from netbox.api.serializers import NetBoxModelSerializer
 from rest_framework import serializers
 
 from ..models import (
-    WordPressConstant, WordPressContentDirectory, WordPressPlugin, WordPressSite, WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
+    WordPressTheme,
 )
 
 
@@ -16,7 +17,7 @@ class WordPressSiteSerializer(NetBoxModelSerializer):
             "id", "url", "display", "name", "device", "virtual_machine", "service_instance",
             "object_cache_instance", "site_url", "wp_version", "table_prefix", "is_multisite",
             "install_path", "database", "db_user", "fpm_profile", "wp_memory_limit", "prod_hardening",
-            "safe_opt", "login_slug", "trusted_proxies", "enable_hsts", "salt_ref",
+            "safe_opt", "login_slug", "trusted_proxies", "enable_hsts", "salt_ref", "site_icon_url",
             "tags", "custom_fields", "created", "last_updated",
         ]
         brief_fields = ["id", "url", "display", "name", "site_url"]
@@ -33,6 +34,19 @@ class WordPressConstantSerializer(NetBoxModelSerializer):
             "tags", "custom_fields", "created", "last_updated",
         ]
         brief_fields = ["id", "url", "display", "name", "value"]
+
+
+class WordPressOptionSerializer(NetBoxModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:netbox_wordpress-api:wordpressoption-detail")
+    site = WordPressSiteSerializer(nested=True)
+
+    class Meta:
+        model = WordPressOption
+        fields = [
+            "id", "url", "display", "site", "name", "key_path", "value", "value_format",
+            "tags", "custom_fields", "created", "last_updated",
+        ]
+        brief_fields = ["id", "url", "display", "name", "key_path", "value"]
 
 
 class WordPressPluginSerializer(NetBoxModelSerializer):

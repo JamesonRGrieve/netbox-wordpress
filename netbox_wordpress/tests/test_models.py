@@ -9,9 +9,11 @@ from utilities.testing import create_test_device
 
 from netbox_wordpress.choices import (
     PluginSourceChoices, PluginStateChoices, RelocationStateChoices, WPConstantTypeChoices,
+    WPOptionFormatChoices,
 )
 from netbox_wordpress.models import (
-    WordPressConstant, WordPressContentDirectory, WordPressPlugin, WordPressSite, WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
+    WordPressTheme,
 )
 from netbox_wordpress.tests.utils import create_test_vm, create_wp_site
 
@@ -47,6 +49,14 @@ class WordPressSiteModelTest(TestCase):
         self.assertTrue(s.safe_opt)
         self.assertTrue(s.enable_hsts)
         self.assertEqual(s.trusted_proxies, "192.168.255.1,10.0.0.0/8")
+
+    def test_site_icon_url_defaults_blank_and_persists(self):
+        s = WordPressSite.objects.create(name="iconic", device=create_test_device("d-icon"))
+        self.assertEqual(s.site_icon_url, "")
+        s.site_icon_url = "https://cdn.example/icons/iconic-512.png"
+        s.save()
+        s.refresh_from_db()
+        self.assertEqual(s.site_icon_url, "https://cdn.example/icons/iconic-512.png")
 
     def test_name_unique(self):
         WordPressSite.objects.create(name="dup", device=create_test_device("d-a"))
@@ -89,6 +99,54 @@ class WordPressConstantModelTest(TestCase):
         WordPressConstant.objects.create(site=self.site, name="WP_MEMORY_LIMIT", value="256M")
         WordPressConstant.objects.create(site=other, name="WP_MEMORY_LIMIT", value="512M")
         self.assertEqual(WordPressConstant.objects.filter(name="WP_MEMORY_LIMIT").count(), 2)
+
+
+class WordPressOptionModelTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.site = create_wp_site("osite")
+
+    def test_whole_option_defaults_str_url(self):
+        o = WordPressOption.objects.create(site=self.site, name="blog_public", value="1")
+        self.assertEqual(o.key_path, "")
+        self.assertEqual(o.value_format, WPOptionFormatChoices.STRING)
+        self.assertEqual(o.get_value_format_color(), "blue")
+        self.assertEqual(str(o), f"{self.site}: blog_public")
+        self.assertIn("/plugins/wordpress/options/", o.get_absolute_url())
+
+    def test_nested_key_str(self):
+        o = WordPressOption.objects.create(
+            site=self.site, name="wpseo", key_path="enable_xml_sitemap", value="true",
+            value_format=WPOptionFormatChoices.JSON,
+        )
+        self.assertEqual(str(o), f"{self.site}: wpseo.enable_xml_sitemap")
+
+    def test_unique_per_site_name_key_path(self):
+        WordPressOption.objects.create(site=self.site, name="wpseo", key_path="a", value="1")
+        WordPressOption.objects.create(site=self.site, name="wpseo", key_path="b", value="1")
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            WordPressOption.objects.create(site=self.site, name="wpseo", key_path="a", value="2")
+
+    def test_same_option_different_site_allowed(self):
+        other = create_wp_site("osite2")
+        WordPressOption.objects.create(site=self.site, name="blogdescription", value="x")
+        WordPressOption.objects.create(site=other, name="blogdescription", value="y")
+        self.assertEqual(WordPressOption.objects.filter(name="blogdescription").count(), 2)
+
+    def test_clean_json_value_must_parse(self):
+        bad = WordPressOption(site=self.site, name="wpseo", key_path="k", value="{not json", value_format=WPOptionFormatChoices.JSON)
+        with self.assertRaises(ValidationError):
+            bad.clean()
+        WordPressOption(site=self.site, name="wpseo", key_path="k", value='{"a": [1, 2]}', value_format=WPOptionFormatChoices.JSON).clean()
+
+    def test_clean_string_value_not_parsed(self):
+        WordPressOption(site=self.site, name="blogname", value="{not json").clean()  # no raise
+
+    def test_cascade_with_site(self):
+        s = create_wp_site("osite-cascade")
+        WordPressOption.objects.create(site=s, name="blog_public", value="0")
+        s.delete()
+        self.assertFalse(WordPressOption.objects.filter(site__name="osite-cascade").exists())
 
 
 class WordPressPluginThemeModelTest(TestCase):

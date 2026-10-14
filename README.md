@@ -29,9 +29,12 @@ plugin only references them by FK.
   `wp_version`, `table_prefix`, `is_multisite`, `install_path` (WP core / Apache docroot),
   `fpm_profile` (low/medium/high), `wp_memory_limit`, `prod_hardening`, `safe_opt` (PHP hardening),
   `login_slug` (wps-hide-login), `trusted_proxies`, `enable_hsts`, `salt_ref` (OpenBao path —
-  never the salts).
+  never the salts), `site_icon_url` (the Site Icon's source image; the provider imports it).
   - **WordPressConstant** (FK) — a single `wp-config.php` `define()` (`name`, `value`,
     `value_type`); unique per `(site, name)`. The long tail beyond the typed fields.
+  - **WordPressOption** (FK) — one declared `wp_options` value: the whole option (blank
+    `key_path`) or one nested key of a settings array (dotted `key_path`, e.g. `wpseo` /
+    `enable_xml_sitemap`); `value_format` string or json. Unique per `(site, name, key_path)`.
   - **WordPressPlugin** (FK) — `slug`, `version` (blank = latest), `state`
     (absent / present_inactive / active — `absent` uninstalls), `source` (wporg/url/zip),
     `source_url`; unique per `(site, slug)`.

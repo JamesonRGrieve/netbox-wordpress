@@ -9,6 +9,8 @@ netbox-services / netbox-database and are referenced by FK — never duplicated 
 SECRET POLICY: AUTH salts are an OpenBao path in ``WordPressSite.salt_ref`` (never the salt values);
 the DB password lives in ``netbox_database.DatabaseUser.credential_ref``. Secret values never live here.
 """
+import json
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
@@ -16,7 +18,7 @@ from netbox.models import NetBoxModel
 
 from .choices import (
     FPMProfileChoices, PluginSourceChoices, PluginStateChoices, RelocationStateChoices,
-    WPConstantTypeChoices,
+    WPConstantTypeChoices, WPOptionFormatChoices,
 )
 
 DEFAULT_TABLE_PREFIX = "wp_"
@@ -100,6 +102,11 @@ class WordPressSite(NetBoxModel):
         default=False,
         help_text="Emit the HSTS header — explicit per-site opt-in, only after the cert chain is confirmed.",
     )
+    site_icon_url = models.URLField(
+        blank=True,
+        help_text="Source image for the WordPress Site Icon (favicon/app icon): a square PNG, at least "
+        "512px. The provider imports it into the media library and sets it as the icon; blank = unmanaged.",
+    )
 
     class Meta:
         ordering = ["name"]
@@ -153,6 +160,53 @@ class WordPressConstant(NetBoxModel):
 
     def get_value_type_color(self):
         return WPConstantTypeChoices.colors.get(self.value_type)
+
+
+class WordPressOption(NetBoxModel):
+    """One declared ``wp_options`` value: plugin settings and site options that are not install-state.
+    A blank ``key_path`` manages the whole option (``wp option update``); a dotted ``key_path`` manages
+    one nested key of a structured option (``wp option patch update``), e.g. ``wpseo`` /
+    ``enable_xml_sitemap``, leaving the rest of the array untouched. ``value_format`` says whether
+    ``value`` is a scalar string or JSON."""
+
+    site = models.ForeignKey(WordPressSite, on_delete=models.CASCADE, related_name="options")
+    name = models.CharField(max_length=191, help_text="Option name (wp_options.option_name), e.g. wpseo.")
+    key_path = models.CharField(
+        max_length=255, blank=True,
+        help_text="Dotted path to one nested key of a structured option (e.g. enable_xml_sitemap); "
+        "blank = the whole option.",
+    )
+    value = models.TextField(help_text="Declared value (a string, or JSON when value_format is json).")
+    value_format = models.CharField(
+        max_length=8, choices=WPOptionFormatChoices, default=WPOptionFormatChoices.STRING
+    )
+
+    class Meta:
+        ordering = ["site", "name", "key_path"]
+        verbose_name = "WordPress Option"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["site", "name", "key_path"],
+                name="netbox_wordpress_wordpressoption_unique_site_name_key",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.site}: {self.name}{'.' + self.key_path if self.key_path else ''}"
+
+    def get_absolute_url(self):
+        return reverse("plugins:netbox_wordpress:wordpressoption", args=[self.pk])
+
+    def get_value_format_color(self):
+        return WPOptionFormatChoices.colors.get(self.value_format)
+
+    def clean(self):
+        super().clean()
+        if self.value_format == WPOptionFormatChoices.JSON:
+            try:
+                json.loads(self.value)
+            except ValueError as e:
+                raise ValidationError({"value": f"value_format is json but value does not parse: {e}"})
 
 
 class WordPressPlugin(NetBoxModel):

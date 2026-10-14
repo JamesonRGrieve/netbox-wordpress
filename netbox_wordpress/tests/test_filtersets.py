@@ -5,14 +5,15 @@ from utilities.testing import create_test_device
 
 from netbox_wordpress.choices import (
     FPMProfileChoices, PluginSourceChoices, PluginStateChoices, RelocationStateChoices,
-    WPConstantTypeChoices,
+    WPConstantTypeChoices, WPOptionFormatChoices,
 )
 from netbox_wordpress.filtersets import (
-    WordPressConstantFilterSet, WordPressContentDirectoryFilterSet, WordPressPluginFilterSet,
-    WordPressSiteFilterSet, WordPressThemeFilterSet,
+    WordPressConstantFilterSet, WordPressContentDirectoryFilterSet, WordPressOptionFilterSet,
+    WordPressPluginFilterSet, WordPressSiteFilterSet, WordPressThemeFilterSet,
 )
 from netbox_wordpress.models import (
-    WordPressConstant, WordPressContentDirectory, WordPressPlugin, WordPressSite, WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
+    WordPressTheme,
 )
 from netbox_wordpress.tests.utils import create_wp_site
 
@@ -42,6 +43,10 @@ class WordPressSiteFilterSetTest(TestCase):
     def test_enable_hsts(self):
         self.assertEqual(WordPressSiteFilterSet({"enable_hsts": True}, self.queryset).qs.count(), 1)
 
+    def test_site_icon_url(self):
+        WordPressSite.objects.filter(name="alpha").update(site_icon_url="https://cdn.example/a.png")
+        self.assertEqual(WordPressSiteFilterSet({"site_icon_url": ["https://cdn.example/a.png"]}, self.queryset).qs.count(), 1)
+
     def test_search(self):
         self.assertEqual(WordPressSiteFilterSet({"q": "alpha"}, self.queryset).qs.count(), 1)
 
@@ -67,6 +72,35 @@ class WordPressConstantFilterSetTest(TestCase):
 
     def test_search(self):
         self.assertEqual(WordPressConstantFilterSet({"q": "WP_MEMORY_LIMIT"}, self.queryset).qs.count(), 1)
+
+
+class WordPressOptionFilterSetTest(TestCase):
+    queryset = WordPressOption.objects.all()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.s1 = create_wp_site("o1")
+        cls.s2 = create_wp_site("o2")
+        WordPressOption.objects.bulk_create([
+            WordPressOption(site=cls.s1, name="wpseo", key_path="enable_xml_sitemap", value="true", value_format=WPOptionFormatChoices.JSON),
+            WordPressOption(site=cls.s1, name="blog_public", value="1"),
+            WordPressOption(site=cls.s2, name="wpseo", key_path="enable_xml_sitemap", value="false", value_format=WPOptionFormatChoices.JSON),
+        ])
+
+    def test_site_id_scopes(self):
+        self.assertEqual(WordPressOptionFilterSet({"site_id": [self.s1.pk]}, self.queryset).qs.count(), 2)
+
+    def test_site_name_scopes(self):
+        self.assertEqual(WordPressOptionFilterSet({"site": ["o2"]}, self.queryset).qs.count(), 1)
+
+    def test_name_and_key_path(self):
+        self.assertEqual(WordPressOptionFilterSet({"name": ["wpseo"], "key_path": ["enable_xml_sitemap"]}, self.queryset).qs.count(), 2)
+
+    def test_value_format(self):
+        self.assertEqual(WordPressOptionFilterSet({"value_format": [WPOptionFormatChoices.STRING]}, self.queryset).qs.count(), 1)
+
+    def test_search(self):
+        self.assertEqual(WordPressOptionFilterSet({"q": "xml_sitemap"}, self.queryset).qs.count(), 2)
 
 
 class WordPressPluginFilterSetTest(TestCase):

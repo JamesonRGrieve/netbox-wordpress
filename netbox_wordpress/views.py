@@ -55,6 +55,31 @@ class WordPressConstantBulkDeleteView(generic.BulkDeleteView):
     table = tables.WordPressConstantTable
 
 
+class WordPressOptionView(generic.ObjectView):
+    queryset = models.WordPressOption.objects.all()
+
+
+class WordPressOptionListView(generic.ObjectListView):
+    queryset = models.WordPressOption.objects.all()
+    table = tables.WordPressOptionTable
+    filterset = filtersets.WordPressOptionFilterSet
+    filterset_form = forms.WordPressOptionFilterForm
+
+
+class WordPressOptionEditView(generic.ObjectEditView):
+    queryset = models.WordPressOption.objects.all()
+    form = forms.WordPressOptionForm
+
+
+class WordPressOptionDeleteView(generic.ObjectDeleteView):
+    queryset = models.WordPressOption.objects.all()
+
+
+class WordPressOptionBulkDeleteView(generic.BulkDeleteView):
+    queryset = models.WordPressOption.objects.all()
+    table = tables.WordPressOptionTable
+
+
 class WordPressPluginView(generic.ObjectView):
     queryset = models.WordPressPlugin.objects.all()
 

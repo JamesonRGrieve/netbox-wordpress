@@ -9,10 +9,11 @@ from virtualization.models import VirtualMachine
 
 from .choices import (
     FPMProfileChoices, PluginSourceChoices, PluginStateChoices, RelocationStateChoices,
-    WPConstantTypeChoices,
+    WPConstantTypeChoices, WPOptionFormatChoices,
 )
 from .models import (
-    WordPressConstant, WordPressContentDirectory, WordPressPlugin, WordPressSite, WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
+    WordPressTheme,
 )
 
 
@@ -22,7 +23,7 @@ class WordPressSiteForm(NetBoxModelForm):
     object_cache_instance = DynamicModelChoiceField(queryset=ServiceInstance.objects.all(), required=False)
 
     fieldsets = (
-        FieldSet("name", "site_url", "wp_version", "table_prefix", "is_multisite", "install_path", name="Site"),
+        FieldSet("name", "site_url", "wp_version", "table_prefix", "is_multisite", "install_path", "site_icon_url", name="Site"),
         FieldSet("device", "virtual_machine", "service_instance", "object_cache_instance", name="Host"),
         FieldSet("database", "db_user", name="Database"),
         FieldSet("fpm_profile", "wp_memory_limit", "prod_hardening", "safe_opt", name="Tuning"),
@@ -35,8 +36,18 @@ class WordPressSiteForm(NetBoxModelForm):
             "name", "device", "virtual_machine", "service_instance", "object_cache_instance",
             "site_url", "wp_version", "table_prefix", "is_multisite", "install_path", "database",
             "db_user", "fpm_profile", "wp_memory_limit", "prod_hardening", "safe_opt", "login_slug",
-            "trusted_proxies", "enable_hsts", "salt_ref", "tags",
+            "trusted_proxies", "enable_hsts", "salt_ref", "site_icon_url", "tags",
         ]
+
+
+class WordPressOptionForm(NetBoxModelForm):
+    site = DynamicModelChoiceField(queryset=WordPressSite.objects.all())
+
+    fieldsets = (FieldSet("site", "name", "key_path", "value", "value_format", name="Option"),)
+
+    class Meta:
+        model = WordPressOption
+        fields = ["site", "name", "key_path", "value", "value_format", "tags"]
 
 
 class WordPressConstantForm(NetBoxModelForm):
@@ -102,6 +113,13 @@ class WordPressConstantFilterForm(NetBoxModelFilterSetForm):
     site_id = DynamicModelMultipleChoiceField(queryset=WordPressSite.objects.all(), required=False, label="Site")
     value_type = forms.MultipleChoiceField(choices=WPConstantTypeChoices, required=False)
     tag = TagFilterField(WordPressConstant)
+
+
+class WordPressOptionFilterForm(NetBoxModelFilterSetForm):
+    model = WordPressOption
+    site_id = DynamicModelMultipleChoiceField(queryset=WordPressSite.objects.all(), required=False, label="Site")
+    value_format = forms.MultipleChoiceField(choices=WPOptionFormatChoices, required=False)
+    tag = TagFilterField(WordPressOption)
 
 
 class WordPressPluginFilterForm(NetBoxModelFilterSetForm):
