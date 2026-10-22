@@ -12,8 +12,8 @@ from .choices import (
     WPConstantTypeChoices, WPOptionFormatChoices,
 )
 from .models import (
-    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
-    WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressMuPlugin, WordPressOption, WordPressPlugin,
+    WordPressSite, WordPressTheme,
 )
 
 
@@ -68,6 +68,16 @@ class WordPressPluginForm(NetBoxModelForm):
     class Meta:
         model = WordPressPlugin
         fields = ["site", "slug", "version", "state", "source", "source_url", "tags"]
+
+
+class WordPressMuPluginForm(NetBoxModelForm):
+    site = DynamicModelChoiceField(queryset=WordPressSite.objects.all())
+
+    fieldsets = (FieldSet("site", "name", "repository", "commit", "source_path", "sha256", "description", name="Must-Use Plugin"),)
+
+    class Meta:
+        model = WordPressMuPlugin
+        fields = ["site", "name", "repository", "commit", "source_path", "sha256", "description", "tags"]
 
 
 class WordPressThemeForm(NetBoxModelForm):
@@ -128,6 +138,12 @@ class WordPressPluginFilterForm(NetBoxModelFilterSetForm):
     source = forms.MultipleChoiceField(choices=PluginSourceChoices, required=False)
     state = forms.MultipleChoiceField(choices=PluginStateChoices, required=False)
     tag = TagFilterField(WordPressPlugin)
+
+
+class WordPressMuPluginFilterForm(NetBoxModelFilterSetForm):
+    model = WordPressMuPlugin
+    site_id = DynamicModelMultipleChoiceField(queryset=WordPressSite.objects.all(), required=False, label="Site")
+    tag = TagFilterField(WordPressMuPlugin)
 
 
 class WordPressThemeFilterForm(NetBoxModelFilterSetForm):

@@ -20,6 +20,7 @@ menu = PluginMenu(
             "Content",
             (
                 _item("wordpressplugin", "Plugins"),
+                _item("wordpressmuplugin", "Must-Use Plugins"),
                 _item("wordpresstheme", "Themes"),
                 _item("wordpresscontentdirectory", "Content Dirs"),
             ),

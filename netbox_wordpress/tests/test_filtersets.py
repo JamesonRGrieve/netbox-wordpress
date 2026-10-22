@@ -8,12 +8,12 @@ from netbox_wordpress.choices import (
     WPConstantTypeChoices, WPOptionFormatChoices,
 )
 from netbox_wordpress.filtersets import (
-    WordPressConstantFilterSet, WordPressContentDirectoryFilterSet, WordPressOptionFilterSet,
-    WordPressPluginFilterSet, WordPressSiteFilterSet, WordPressThemeFilterSet,
+    WordPressConstantFilterSet, WordPressContentDirectoryFilterSet, WordPressMuPluginFilterSet,
+    WordPressOptionFilterSet, WordPressPluginFilterSet, WordPressSiteFilterSet, WordPressThemeFilterSet,
 )
 from netbox_wordpress.models import (
-    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
-    WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressMuPlugin, WordPressOption, WordPressPlugin,
+    WordPressSite, WordPressTheme,
 )
 from netbox_wordpress.tests.utils import create_wp_site
 
@@ -130,6 +130,39 @@ class WordPressPluginFilterSetTest(TestCase):
 
     def test_search(self):
         self.assertEqual(WordPressPluginFilterSet({"q": "woocommerce"}, self.queryset).qs.count(), 1)
+
+
+class WordPressMuPluginFilterSetTest(TestCase):
+    queryset = WordPressMuPlugin.objects.all()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.s1 = create_wp_site("mu1")
+        cls.s2 = create_wp_site("mu2")
+        WordPressMuPlugin.objects.bulk_create([
+            WordPressMuPlugin(site=cls.s1, name="square-guard.php", repository="Org1/guards", commit="1" * 40, source_path="files/mu1/square-guard.php", sha256="a" * 64, description="Square catalogue guard"),
+            WordPressMuPlugin(site=cls.s1, name="session.php", repository="Org1/guards", commit="1" * 40, source_path="files/mu1/session.php", sha256="b" * 64),
+            WordPressMuPlugin(site=cls.s2, name="square-guard.php", repository="Org2/sync", commit="2" * 40, source_path="files/mu2/square-guard.php", sha256="c" * 64),
+        ])
+
+    def test_site_id_scopes(self):
+        self.assertEqual(WordPressMuPluginFilterSet({"site_id": [self.s1.pk]}, self.queryset).qs.count(), 2)
+
+    def test_site_name_scopes(self):
+        self.assertEqual(WordPressMuPluginFilterSet({"site": ["mu2"]}, self.queryset).qs.count(), 1)
+
+    def test_name(self):
+        self.assertEqual(WordPressMuPluginFilterSet({"name": ["square-guard.php"]}, self.queryset).qs.count(), 2)
+
+    def test_repository_and_commit(self):
+        self.assertEqual(WordPressMuPluginFilterSet({"repository": ["Org1/guards"]}, self.queryset).qs.count(), 2)
+        self.assertEqual(WordPressMuPluginFilterSet({"commit": ["2" * 40]}, self.queryset).qs.count(), 1)
+
+    def test_search_name_path_description(self):
+        self.assertEqual(WordPressMuPluginFilterSet({"q": "Org2/"}, self.queryset).qs.count(), 1)
+        self.assertEqual(WordPressMuPluginFilterSet({"q": "session"}, self.queryset).qs.count(), 1)
+        self.assertEqual(WordPressMuPluginFilterSet({"q": "files/mu2"}, self.queryset).qs.count(), 1)
+        self.assertEqual(WordPressMuPluginFilterSet({"q": "catalogue"}, self.queryset).qs.count(), 1)
 
 
 class WordPressThemeFilterSetTest(TestCase):

@@ -12,8 +12,8 @@ from netbox_wordpress.choices import (
     WPOptionFormatChoices,
 )
 from netbox_wordpress.models import (
-    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
-    WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressMuPlugin, WordPressOption, WordPressPlugin,
+    WordPressSite, WordPressTheme,
 )
 from netbox_wordpress.tests.utils import create_test_vm, create_wp_site
 
@@ -220,3 +220,74 @@ class WordPressContentDirectoryModelTest(TestCase):
         WordPressContentDirectory.objects.create(site=self.site)
         with self.assertRaises(IntegrityError), transaction.atomic():
             WordPressContentDirectory.objects.create(site=self.site)
+
+
+SHA = "a" * 64
+GUARD_PATH = "bracoach-square-guard.php"
+REPO = "TheBraCoach/bracoach-square-sync"
+COMMIT = "6cfae4c" + "0" * 33
+
+
+class WordPressMuPluginModelTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.site = create_wp_site("thebracoach.ca")
+
+    def _mu(self, **kw):
+        return WordPressMuPlugin(**{"site": self.site, "name": "bracoach-square-guard.php", "repository": REPO, "commit": COMMIT,
+                                     "source_path": GUARD_PATH, "sha256": SHA, **kw})
+
+    def _assert_invalid(self, field, **kw):
+        with self.assertRaises(ValidationError) as cm:
+            self._mu(**kw).full_clean()
+        self.assertIn(field, cm.exception.message_dict)
+
+    def test_create_str_url(self):
+        m = self._mu(description="Square catalogue guard")
+        m.full_clean()
+        m.save()
+        m.refresh_from_db()
+        self.assertEqual(m.sha256, SHA)
+        self.assertEqual((m.repository, m.commit, m.source_path), (REPO, COMMIT, GUARD_PATH))
+        self.assertEqual(str(m), "thebracoach.ca: bracoach-square-guard.php")
+        self.assertIn("/plugins/wordpress/muplugins/", m.get_absolute_url())
+        self.assertEqual(list(self.site.muplugins.all()), [m])
+
+    def test_unique_per_site_name(self):
+        self._mu().save()
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self._mu(sha256="b" * 64).save()
+
+    def test_same_name_different_site_allowed(self):
+        self._mu().save()
+        self._mu(site=create_wp_site("mu-other")).save()
+        self.assertEqual(WordPressMuPlugin.objects.filter(name="bracoach-square-guard.php").count(), 2)
+
+    def test_name_validator(self):
+        for bad in ("guard.js", "sub/guard.php", "../guard.php", ".hidden.php", "guard.php.bak", "gu ard.php", ""):
+            self._assert_invalid("name", name=bad)
+        self._mu(name="Zz_9.guard-v2.php").full_clean()
+
+    def test_source_path_validator(self):
+        for bad in ("/abs/guard.php", "../guard.php", "a/../guard.php", "a/..", "..", ""):
+            self._assert_invalid("source_path", source_path=bad)
+        self._mu(source_path="files/guard..v2.php").full_clean()
+
+    def test_repository_validator(self):
+        for bad in ("bracoach-square-sync", "a/b/c", "/a/b", "a/", "a b/c", ""):
+            self._assert_invalid("repository", repository=bad)
+        self._mu(repository="ObsessedMediaGroup/woocommerce-square-guard").full_clean()
+
+    def test_commit_validator(self):
+        for bad in ("6cfae4c", "A" * 40, "g" * 40, "a" * 41, "main", ""):
+            self._assert_invalid("commit", commit=bad)
+
+    def test_sha256_validator(self):
+        for bad in ("A" * 64, "a" * 63, "g" * 64, ""):
+            self._assert_invalid("sha256", sha256=bad)
+
+    def test_cascade_on_site_delete(self):
+        s = create_wp_site("mu-cascade")
+        self._mu(site=s).save()
+        s.delete()
+        self.assertFalse(WordPressMuPlugin.objects.filter(site__name="mu-cascade").exists())

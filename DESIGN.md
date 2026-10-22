@@ -38,6 +38,11 @@ change-logged NetBox object instead of living in `wp-config.php`, playbook comme
      └───────────────┘ └───────────────┘ └───────────────┘ └───────────────────────────┘
 ```
 
+Two further FK children have the same shape: `WordPressOption` (`name key_path value
+value_format`, U(site,name,key_path)) and `WordPressMuPlugin` (`name repository commit
+source_path sha256 description`, U(site,name)) — a site-specific must-use plugin whose code lives in
+OMG's Forgejo; NetBox pins the repository, the commit, the file's path in it, and its sha256.
+
 Child rows CASCADE with their `WordPressSite`. The five composed FKs (device, virtual_machine,
 service_instance, database, db_user) are `PROTECT` — you cannot delete a host/service/DB while a
 WordPress site still references it.
@@ -171,7 +176,10 @@ as the single source of truth: `WordPressSite` (host + service + DB + tuning) �
 pool + `wp-config.php`; `WordPressConstant` rows → the long-tail `define()`s; `WordPressOption`
 rows → `wp option update` (whole option) or `wp option patch update` (one nested key, leaving the
 rest of a plugin's settings array alone); `WordPressSite.site_icon_url` → a media import plus the
-`site_icon` option; `WordPressPlugin`
+`site_icon` option; `WordPressMuPlugin` rows → the `wordpress_muplugin` resource, which writes the
+file at `source_path` in `repository` at `commit` to `wp-content/mu-plugins/<name>`, checked
+against `sha256` (code in Forgejo, pin in NetBox);
+`WordPressPlugin`
 / `WordPressTheme` `state` → `wp plugin/theme` install-state — `active` installs+activates,
 `present_inactive` installs+deactivates, and **`absent` uninstalls** (so the SoT can retire cruft
 like W3TC/LiteSpeed, not merely leave it off); `WordPressContentDirectory` → drives the

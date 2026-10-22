@@ -68,12 +68,12 @@ a blob.
 |------|----------------|
 | `__init__.py` | `PluginConfig` — name `netbox_wordpress`, `base_url='wordpress'`, min/max 4.6, `required_plugins` |
 | `choices.py` | `PluginSourceChoices`, `PluginStateChoices`, `WPConstantTypeChoices`, `RelocationStateChoices`, `FPMProfileChoices` |
-| `models.py` | the 5 models (see below) + `WordPressSite.clean()` exactly-one-host rule |
-| `migrations/0001_initial.py` | hand-authored (NetBox disables makemigrations in prod); verify with `makemigrations --check --dry-run` |
+| `models.py` | the 7 models (see below) + `WordPressSite.clean()` exactly-one-host rule |
+| `migrations/000N_*.py` | hand-authored (NetBox disables makemigrations in prod); verify with `makemigrations --check --dry-run` |
 | `api/serializers.py`, `api/views.py`, `api/urls.py` | REST (`NetBoxModelViewSet`) — the contract the tofu-wordpress provider reads |
 | `filtersets.py` | `NetBoxModelFilterSet` per model (`search()` + explicit FK-by-PK filters) |
 | `tables.py`, `forms.py`, `navigation.py`, `views.py`, `urls.py` | UI (generic NetBox views) |
-| `templates/netbox_wordpress/wordpresssite.html` | custom detail page (extends `generic/object.html`): host, DB, tuning, related plugins/themes/content-dir |
+| `templates/netbox_wordpress/wordpresssite.html` | custom detail page (extends `generic/object.html`): host, DB, tuning, related options/plugins/mu-plugins/themes/content-dir |
 | `graphql/__init__.py` | placeholder (auto GraphQL via `NetBoxModel`) |
 
 ### Model — WordPress app-config SoT
@@ -91,6 +91,11 @@ a blob.
   - **WordPressPlugin** (FK, CASCADE): `slug`, `version` (blank=latest), `state`
     (absent/present_inactive/active — `absent` uninstalls), `source` (wporg/url/zip), `source_url`;
     unique `(site, slug)`.
+  - **WordPressMuPlugin** (FK, CASCADE): `name` (bare `*.php` file in `wp-content/mu-plugins/`),
+    `repository` (Forgejo `<Org>/<repo>`), `commit` (full 40-hex id), `source_path` (path of the
+    file inside that repo; no leading `/`, no `..`), `sha256` (lowercase hex of the file bytes),
+    `description`; unique `(site, name)`. Code lives in Forgejo; NetBox only pins which site gets
+    which file at which commit and hash.
   - **WordPressTheme** (FK, CASCADE): same shape as plugin (`state` default `present_inactive`);
     unique `(site, slug)`.
   - **WordPressContentDirectory** (1:1, CASCADE): `content_dir`, `uploads_dir`,

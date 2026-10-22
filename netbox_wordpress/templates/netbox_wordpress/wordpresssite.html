@@ -86,6 +86,16 @@
       </table>
     </div>
     <div class="card">
+      <h2 class="card-header">Must-use plugins</h2>
+      <table class="table table-hover attr-table">
+        {% for m in object.muplugins.all %}
+        <tr><td><a href="{{ m.get_absolute_url }}">{{ m.name }}</a></td><td><code>{{ m.sha256|truncatechars:13 }}</code></td></tr>
+        {% empty %}
+        <tr><td colspan="2" class="text-muted">No must-use plugins</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div class="card">
       <h2 class="card-header">Themes</h2>
       <table class="table table-hover attr-table">
         {% for t in object.themes.all %}

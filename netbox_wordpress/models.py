@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Native WordPress app-config models. :class:`WordPressSite` is the instance (host-bound + linked to
 its ServiceInstance / Database / DatabaseUser); the repeating and long-tail config hangs off it as
-child rows (constants, plugins, themes) plus a 1:1 content-directory record.
+child rows (constants, options, plugins, mu-plugins, themes) plus a 1:1 content-directory record.
 
 COMPOSE, DON'T RE-MODEL: the running service, its HA mirror, and the backing DB live in
 netbox-services / netbox-database and are referenced by FK — never duplicated here (see DESIGN.md).
@@ -12,6 +12,7 @@ the DB password lives in ``netbox_database.DatabaseUser.credential_ref``. Secret
 import json
 
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db import models
 from django.urls import reverse
 from netbox.models import NetBoxModel
@@ -24,6 +25,15 @@ from .choices import (
 DEFAULT_TABLE_PREFIX = "wp_"
 DEFAULT_CONTENT_DIR = "/var/www/html/wp-content"
 DEFAULT_LOGIN_PATH = "wp-login.php"
+MUPLUGIN_NAME_VALIDATOR = RegexValidator(
+    r"^[A-Za-z0-9][A-Za-z0-9._-]*\.php$", "A bare .php file name (no slashes)."
+)
+REPO_RELATIVE_PATH_VALIDATOR = RegexValidator(
+    r"^(?!/)(?!(?:.*/)?\.\.(?:/|$)).+$", "A repo-relative path: no leading / and no .. segments."
+)
+SHA256_VALIDATOR = RegexValidator(r"^[0-9a-f]{64}$", "Lowercase hex sha256 (64 chars).")
+REPOSITORY_VALIDATOR = RegexValidator(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$", "<Org>/<repo>, e.g. TheBraCoach/bracoach-square-sync.")
+COMMIT_VALIDATOR = RegexValidator(r"^[0-9a-f]{40}$", "A full lowercase 40-hex commit id.")
 
 
 class WordPressSite(NetBoxModel):
@@ -246,6 +256,50 @@ class WordPressPlugin(NetBoxModel):
 
     def get_state_color(self):
         return PluginStateChoices.colors.get(self.state)
+
+
+class WordPressMuPlugin(NetBoxModel):
+    """One site-specific must-use plugin file. The code lives in OMG's Forgejo: ``source_path`` in
+    ``repository`` at the pinned ``commit``. NetBox declares which site gets which file at which commit;
+    the pipeline installs that file's exact bytes (checked against ``sha256``) to
+    ``wp-content/mu-plugins/<name>``."""
+
+    site = models.ForeignKey(WordPressSite, on_delete=models.CASCADE, related_name="muplugins")
+    name = models.CharField(
+        max_length=128, validators=[MUPLUGIN_NAME_VALIDATOR],
+        help_text="File name in wp-content/mu-plugins/, e.g. bracoach-square-guard.php.",
+    )
+    repository = models.CharField(
+        max_length=200, validators=[REPOSITORY_VALIDATOR],
+        help_text="Forgejo repository holding the file, <Org>/<repo>.",
+    )
+    commit = models.CharField(
+        max_length=40, validators=[COMMIT_VALIDATOR], help_text="Pinned commit id (full 40 hex)."
+    )
+    source_path = models.CharField(
+        max_length=255, validators=[REPO_RELATIVE_PATH_VALIDATOR],
+        help_text="Path of the file inside the repository (no leading /, no ..).",
+    )
+    sha256 = models.CharField(
+        max_length=64, validators=[SHA256_VALIDATOR], help_text="Lowercase hex sha256 of the file's exact bytes."
+    )
+    description = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["site", "name"]
+        verbose_name = "WordPress Must-Use Plugin"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["site", "name"],
+                name="netbox_wordpress_wordpressmuplugin_unique_site_name",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.site}: {self.name}"
+
+    def get_absolute_url(self):
+        return reverse("plugins:netbox_wordpress:wordpressmuplugin", args=[self.pk])
 
 
 class WordPressTheme(NetBoxModel):

@@ -38,6 +38,11 @@ plugin only references them by FK.
   - **WordPressPlugin** (FK) — `slug`, `version` (blank = latest), `state`
     (absent / present_inactive / active — `absent` uninstalls), `source` (wporg/url/zip),
     `source_url`; unique per `(site, slug)`.
+  - **WordPressMuPlugin** (FK) — one site-specific must-use plugin: `name` (the `*.php` file
+    written to `wp-content/mu-plugins/`), `repository` (Forgejo `<Org>/<repo>`), `commit` (pinned
+    40-hex id), `source_path` (the file inside that repo), `sha256` (hex hash of its exact bytes),
+    `description`; unique per `(site, name)`. The code lives in Forgejo; NetBox pins which site gets
+    which file at which commit and hash.
   - **WordPressTheme** (FK) — same shape as plugin (`state` default `present_inactive`); unique
     per `(site, slug)`.
   - **WordPressContentDirectory** (1:1) — the SoT for the tofu-wordpress content-relocation

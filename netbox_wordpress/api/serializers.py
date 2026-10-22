@@ -3,8 +3,8 @@ from netbox.api.serializers import NetBoxModelSerializer
 from rest_framework import serializers
 
 from ..models import (
-    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
-    WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressMuPlugin, WordPressOption, WordPressPlugin,
+    WordPressSite, WordPressTheme,
 )
 
 
@@ -60,6 +60,19 @@ class WordPressPluginSerializer(NetBoxModelSerializer):
             "tags", "custom_fields", "created", "last_updated",
         ]
         brief_fields = ["id", "url", "display", "slug", "version"]
+
+
+class WordPressMuPluginSerializer(NetBoxModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:netbox_wordpress-api:wordpressmuplugin-detail")
+    site = WordPressSiteSerializer(nested=True)
+
+    class Meta:
+        model = WordPressMuPlugin
+        fields = [
+            "id", "url", "display", "site", "name", "repository", "commit", "source_path", "sha256", "description",
+            "tags", "custom_fields", "created", "last_updated",
+        ]
+        brief_fields = ["id", "url", "display", "name", "commit", "sha256"]
 
 
 class WordPressThemeSerializer(NetBoxModelSerializer):

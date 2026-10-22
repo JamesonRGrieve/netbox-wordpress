@@ -3,8 +3,8 @@ import django_tables2 as tables
 from netbox.tables import NetBoxTable, columns
 
 from .models import (
-    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
-    WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressMuPlugin, WordPressOption, WordPressPlugin,
+    WordPressSite, WordPressTheme,
 )
 
 
@@ -67,6 +67,20 @@ class WordPressPluginTable(NetBoxTable):
         model = WordPressPlugin
         fields = ("pk", "id", "site", "slug", "version", "state", "source", "source_url", "tags", "created", "last_updated")
         default_columns = ("site", "slug", "version", "state", "source")
+
+
+class WordPressMuPluginTable(NetBoxTable):
+    site = tables.Column(linkify=True)
+    name = tables.Column(linkify=True)
+    tags = columns.TagColumn(url_name="plugins:netbox_wordpress:wordpressmuplugin_list")
+
+    class Meta(NetBoxTable.Meta):
+        model = WordPressMuPlugin
+        fields = (
+            "pk", "id", "site", "name", "repository", "commit", "source_path", "sha256", "description", "tags",
+            "created", "last_updated",
+        )
+        default_columns = ("site", "name", "repository", "commit", "source_path")
 
 
 class WordPressThemeTable(NetBoxTable):

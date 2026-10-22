@@ -12,8 +12,8 @@ from .choices import (
     WPConstantTypeChoices, WPOptionFormatChoices,
 )
 from .models import (
-    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
-    WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressMuPlugin, WordPressOption, WordPressPlugin,
+    WordPressSite, WordPressTheme,
 )
 
 # Explicit FK filters: django-filter does NOT derive `<fk>_id` from a bare FK in Meta.fields,
@@ -91,6 +91,18 @@ class WordPressPluginFilterSet(_SiteFilterMixin):
 
     def search(self, queryset, name, value):
         return queryset.filter(Q(slug__icontains=value) | Q(version__icontains=value))
+
+
+class WordPressMuPluginFilterSet(_SiteFilterMixin):
+    class Meta:
+        model = WordPressMuPlugin
+        fields = ["id", "name", "repository", "commit", "source_path", "sha256"]
+
+    def search(self, queryset, name, value):
+        return queryset.filter(
+            Q(name__icontains=value) | Q(repository__icontains=value) | Q(source_path__icontains=value)
+            | Q(description__icontains=value)
+        )
 
 
 class WordPressThemeFilterSet(_SiteFilterMixin):

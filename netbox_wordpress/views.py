@@ -105,6 +105,31 @@ class WordPressPluginBulkDeleteView(generic.BulkDeleteView):
     table = tables.WordPressPluginTable
 
 
+class WordPressMuPluginView(generic.ObjectView):
+    queryset = models.WordPressMuPlugin.objects.all()
+
+
+class WordPressMuPluginListView(generic.ObjectListView):
+    queryset = models.WordPressMuPlugin.objects.all()
+    table = tables.WordPressMuPluginTable
+    filterset = filtersets.WordPressMuPluginFilterSet
+    filterset_form = forms.WordPressMuPluginFilterForm
+
+
+class WordPressMuPluginEditView(generic.ObjectEditView):
+    queryset = models.WordPressMuPlugin.objects.all()
+    form = forms.WordPressMuPluginForm
+
+
+class WordPressMuPluginDeleteView(generic.ObjectDeleteView):
+    queryset = models.WordPressMuPlugin.objects.all()
+
+
+class WordPressMuPluginBulkDeleteView(generic.BulkDeleteView):
+    queryset = models.WordPressMuPlugin.objects.all()
+    table = tables.WordPressMuPluginTable
+
+
 class WordPressThemeView(generic.ObjectView):
     queryset = models.WordPressTheme.objects.all()
 

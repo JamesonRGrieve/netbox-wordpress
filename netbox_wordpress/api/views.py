@@ -3,12 +3,12 @@ from netbox.api.viewsets import NetBoxModelViewSet
 
 from .. import filtersets
 from ..models import (
-    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
-    WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressMuPlugin, WordPressOption, WordPressPlugin,
+    WordPressSite, WordPressTheme,
 )
 from .serializers import (
-    WordPressConstantSerializer, WordPressContentDirectorySerializer, WordPressOptionSerializer,
-    WordPressPluginSerializer, WordPressSiteSerializer, WordPressThemeSerializer,
+    WordPressConstantSerializer, WordPressContentDirectorySerializer, WordPressMuPluginSerializer,
+    WordPressOptionSerializer, WordPressPluginSerializer, WordPressSiteSerializer, WordPressThemeSerializer,
 )
 
 
@@ -37,6 +37,12 @@ class WordPressPluginViewSet(NetBoxModelViewSet):
     queryset = WordPressPlugin.objects.prefetch_related("site", "tags")
     serializer_class = WordPressPluginSerializer
     filterset_class = filtersets.WordPressPluginFilterSet
+
+
+class WordPressMuPluginViewSet(NetBoxModelViewSet):
+    queryset = WordPressMuPlugin.objects.prefetch_related("site", "tags")
+    serializer_class = WordPressMuPluginSerializer
+    filterset_class = filtersets.WordPressMuPluginFilterSet
 
 
 class WordPressThemeViewSet(NetBoxModelViewSet):

@@ -9,8 +9,8 @@ import unittest
 from utilities.testing import APIViewTestCases, create_test_device
 
 from netbox_wordpress.models import (
-    WordPressConstant, WordPressContentDirectory, WordPressOption, WordPressPlugin, WordPressSite,
-    WordPressTheme,
+    WordPressConstant, WordPressContentDirectory, WordPressMuPlugin, WordPressOption, WordPressPlugin,
+    WordPressSite, WordPressTheme,
 )
 from netbox_wordpress.tests.utils import create_wp_site
 
@@ -125,6 +125,49 @@ class WordPressPluginAPITest(_CRUD):
             {"site": site.pk, "slug": "custom", "source": "url", "source_url": "https://example.com/custom.zip"},
             {"site": site.pk, "slug": "w3-total-cache", "state": "absent"},
         ]
+
+
+class WordPressMuPluginAPITest(_CRUD):
+    model = WordPressMuPlugin
+    brief_fields = ["commit", "display", "id", "name", "sha256", "url"]
+    bulk_update_data = {"description": "pinned in git"}
+
+    @classmethod
+    def setUpTestData(cls):
+        site = create_wp_site("thebracoach.ca")
+        src = {"repository": "TheBraCoach/bracoach-square-sync", "commit": "c" * 40}
+        WordPressMuPlugin.objects.bulk_create([
+            WordPressMuPlugin(site=site, name=f"m{i}.php", source_path=f"m{i}.php", sha256=f"{i}" * 64, **src) for i in range(3)
+        ])
+        cls.create_data = [
+            {"site": site.pk, "name": "bracoach-square-guard.php", "source_path": "bracoach-square-guard.php", "sha256": "a" * 64, "description": "Square catalogue guard", **src},
+            {"site": site.pk, "name": "b.php", "source_path": "b.php", "sha256": "b" * 64, **src},
+            {"site": site.pk, "name": "c.php", "source_path": "c.php", "sha256": "c" * 64, **src},
+        ]
+
+    def test_contract_fields(self):
+        self.add_permissions("netbox_wordpress.view_wordpressmuplugin")
+        obj = WordPressMuPlugin.objects.get(name="m0.php")
+        resp = self.client.get(self._get_detail_url(obj), **self.header)
+        self.assertHttpStatus(resp, 200)
+        self.assertTrue(resp.data["url"].endswith(f"/api/plugins/wordpress/muplugins/{obj.pk}/"))
+        self.assertEqual(resp.data["site"]["name"], "thebracoach.ca")
+        self.assertEqual(
+            {k: resp.data[k] for k in ("name", "repository", "commit", "source_path", "sha256", "description")},
+            {"name": "m0.php", "repository": "TheBraCoach/bracoach-square-sync", "commit": "c" * 40,
+             "source_path": "m0.php", "sha256": "0" * 64, "description": ""},
+        )
+
+    def test_rejects_invalid_values(self):
+        self.add_permissions("netbox_wordpress.add_wordpressmuplugin")
+        site = WordPressSite.objects.get(name="thebracoach.ca")
+        ok = {"site": site.pk, "name": "x.php", "repository": "Org/repo", "commit": "d" * 40,
+              "source_path": "files/x.php", "sha256": "d" * 64}
+        for field, bad in (("name", "sub/x.php"), ("repository", "repo"), ("commit", "main"), ("source_path", "/etc/x.php"),
+                           ("source_path", "a/../x.php"), ("sha256", "D" * 64)):
+            resp = self.client.post(self._get_list_url(), {**ok, field: bad}, format="json", **self.header)
+            self.assertHttpStatus(resp, 400)
+            self.assertIn(field, resp.data)
 
 
 class WordPressThemeAPITest(_CRUD):
