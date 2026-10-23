@@ -172,6 +172,45 @@ class WordPressPluginThemeModelTest(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             WordPressPlugin.objects.create(site=self.site, slug="jetpack")
 
+    def _forgejo(self, **overrides):
+        fields = {"site": self.site, "slug": "wp-woo-scan-in", "source": PluginSourceChoices.FORGEJO,
+                  "repository": "ObsessedMediaGroup/wp-woo-scan-in", "commit": "1b6587a9f29c99e1c1d7850f4f20b9e3399407bf"}
+        return WordPressPlugin(**(fields | overrides))
+
+    def test_plugin_forgejo_source_valid(self):
+        p = self._forgejo()
+        p.full_clean()
+        p.save()
+        self.assertEqual(p.get_source_color(), "purple")
+        self.assertEqual(WordPressPlugin.objects.get(pk=p.pk).commit, "1b6587a9f29c99e1c1d7850f4f20b9e3399407bf")
+
+    def test_plugin_forgejo_requires_repository_and_commit(self):
+        with self.assertRaises(ValidationError) as cm:
+            self._forgejo(repository="", commit="").full_clean()
+        self.assertEqual(set(cm.exception.message_dict), {"repository", "commit"})
+
+    def test_plugin_forgejo_rejects_version_and_url(self):
+        with self.assertRaises(ValidationError) as cm:
+            self._forgejo(version="1.0.0", source_url="https://example.com/p.zip").full_clean()
+        self.assertEqual(set(cm.exception.message_dict), {"version", "source_url"})
+
+    def test_plugin_forgejo_commit_must_be_full_hex(self):
+        with self.assertRaises(ValidationError) as cm:
+            self._forgejo(commit="1b6587a").full_clean()
+        self.assertIn("commit", cm.exception.message_dict)
+
+    def test_plugin_forgejo_repository_shape(self):
+        with self.assertRaises(ValidationError) as cm:
+            self._forgejo(repository="no-org").full_clean()
+        self.assertIn("repository", cm.exception.message_dict)
+
+    def test_plugin_other_sources_reject_forgejo_fields(self):
+        p = WordPressPlugin(site=self.site, slug="woocommerce", source=PluginSourceChoices.WPORG,
+                            repository="ObsessedMediaGroup/x", commit="1b6587a9f29c99e1c1d7850f4f20b9e3399407bf")
+        with self.assertRaises(ValidationError) as cm:
+            p.full_clean()
+        self.assertEqual(set(cm.exception.message_dict), {"repository", "commit"})
+
     def test_theme_defaults_and_url(self):
         t = WordPressTheme.objects.create(site=self.site, slug="twentytwentyfour", source=PluginSourceChoices.ZIP, source_url="https://example.com/t.zip")
         self.assertEqual(t.state, PluginStateChoices.PRESENT_INACTIVE)

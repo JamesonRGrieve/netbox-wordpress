@@ -87,10 +87,12 @@ class WordPressPluginFilterSet(_SiteFilterMixin):
 
     class Meta:
         model = WordPressPlugin
-        fields = ["id", "slug", "version", "state", "source_url"]
+        fields = ["id", "slug", "version", "state", "source_url", "repository", "commit"]
 
     def search(self, queryset, name, value):
-        return queryset.filter(Q(slug__icontains=value) | Q(version__icontains=value))
+        return queryset.filter(
+            Q(slug__icontains=value) | Q(version__icontains=value) | Q(repository__icontains=value)
+        )
 
 
 class WordPressMuPluginFilterSet(_SiteFilterMixin):

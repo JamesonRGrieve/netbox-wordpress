@@ -114,10 +114,20 @@ class WordPressPluginFilterSetTest(TestCase):
             WordPressPlugin(site=cls.s1, slug="woocommerce", source=PluginSourceChoices.WPORG, state=PluginStateChoices.ACTIVE),
             WordPressPlugin(site=cls.s1, slug="w3-total-cache", source=PluginSourceChoices.ZIP, state=PluginStateChoices.ABSENT),
             WordPressPlugin(site=cls.s2, slug="jetpack", source=PluginSourceChoices.WPORG, state=PluginStateChoices.ACTIVE),
+            WordPressPlugin(site=cls.s2, slug="wp-woo-scan-in", source=PluginSourceChoices.FORGEJO,
+                            state=PluginStateChoices.PRESENT_INACTIVE,
+                            repository="ObsessedMediaGroup/wp-woo-scan-in", commit="1b6587a9f29c99e1c1d7850f4f20b9e3399407bf"),
         ])
 
     def test_site_id_scopes(self):
         self.assertEqual(WordPressPluginFilterSet({"site_id": [self.s1.pk]}, self.queryset).qs.count(), 2)
+
+    def test_forgejo_source_repository_and_commit(self):
+        fs = WordPressPluginFilterSet
+        self.assertEqual(fs({"source": [PluginSourceChoices.FORGEJO]}, self.queryset).qs.get().slug, "wp-woo-scan-in")
+        self.assertEqual(fs({"repository": ["ObsessedMediaGroup/wp-woo-scan-in"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(fs({"commit": ["1b6587a9f29c99e1c1d7850f4f20b9e3399407bf"]}, self.queryset).qs.count(), 1)
+        self.assertEqual(fs({"q": "ObsessedMediaGroup"}, self.queryset).qs.count(), 1)
 
     def test_source(self):
         self.assertEqual(WordPressPluginFilterSet({"source": [PluginSourceChoices.ZIP]}, self.queryset).qs.count(), 1)

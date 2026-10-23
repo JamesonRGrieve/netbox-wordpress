@@ -123,8 +123,19 @@ class WordPressPluginAPITest(_CRUD):
         cls.create_data = [
             {"site": site.pk, "slug": "jetpack", "version": "13.0", "state": "active", "source": "wporg"},
             {"site": site.pk, "slug": "custom", "source": "url", "source_url": "https://example.com/custom.zip"},
-            {"site": site.pk, "slug": "w3-total-cache", "state": "absent"},
+            {"site": site.pk, "slug": "wp-woo-scan-in", "source": "forgejo",
+             "repository": "ObsessedMediaGroup/wp-woo-scan-in", "commit": "1b6587a9f29c99e1c1d7850f4f20b9e3399407bf"},
         ]
+
+    def test_forgejo_source_without_commit_is_rejected(self):
+        self.add_permissions("netbox_wordpress.add_wordpressplugin")
+        site = WordPressSite.objects.get(name="plugin-api")
+        resp = self.client.post(
+            self._get_list_url(),
+            {"site": site.pk, "slug": "half-pinned", "source": "forgejo", "repository": "ObsessedMediaGroup/x"},
+            format="json", **self.header,
+        )
+        self.assertHttpStatus(resp, 400)
 
 
 class WordPressMuPluginAPITest(_CRUD):

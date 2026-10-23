@@ -9,10 +9,12 @@ class PluginSourceChoices(ChoiceSet):
     WPORG = "wporg"
     URL = "url"
     ZIP = "zip"
+    FORGEJO = "forgejo"
     CHOICES = [
         (WPORG, "WordPress.org", "blue"),
         (URL, "URL", "cyan"),
         (ZIP, "ZIP upload", "gray"),
+        (FORGEJO, "Forgejo (pinned commit)", "purple"),
     ]
 
 

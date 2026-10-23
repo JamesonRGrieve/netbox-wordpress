@@ -63,11 +63,14 @@ class WordPressConstantForm(NetBoxModelForm):
 class WordPressPluginForm(NetBoxModelForm):
     site = DynamicModelChoiceField(queryset=WordPressSite.objects.all())
 
-    fieldsets = (FieldSet("site", "slug", "version", "state", "source", "source_url", name="Plugin"),)
+    fieldsets = (
+        FieldSet("site", "slug", "version", "state", name="Plugin"),
+        FieldSet("source", "source_url", "repository", "commit", name="Source"),
+    )
 
     class Meta:
         model = WordPressPlugin
-        fields = ["site", "slug", "version", "state", "source", "source_url", "tags"]
+        fields = ["site", "slug", "version", "state", "source", "source_url", "repository", "commit", "tags"]
 
 
 class WordPressMuPluginForm(NetBoxModelForm):

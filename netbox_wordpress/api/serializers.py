@@ -57,7 +57,7 @@ class WordPressPluginSerializer(NetBoxModelSerializer):
         model = WordPressPlugin
         fields = [
             "id", "url", "display", "site", "slug", "version", "state", "source", "source_url",
-            "tags", "custom_fields", "created", "last_updated",
+            "repository", "commit", "tags", "custom_fields", "created", "last_updated",
         ]
         brief_fields = ["id", "url", "display", "slug", "version"]
 

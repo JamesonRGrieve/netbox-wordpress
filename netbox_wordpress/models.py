@@ -221,7 +221,9 @@ class WordPressOption(NetBoxModel):
 
 class WordPressPlugin(NetBoxModel):
     """Declared install-state for one WordPress plugin. Blank ``version`` tracks latest; ``source``
-    selects wporg / a URL / an uploaded zip (``source_url`` carries the URL or zip location)."""
+    selects wporg / a URL / an uploaded zip (``source_url`` carries the URL or zip location) / OMG's
+    Forgejo: ``repository`` at the pinned ``commit``, installed from that commit's archive (the commit
+    is the version, so ``version`` and ``source_url`` stay blank)."""
 
     site = models.ForeignKey(WordPressSite, on_delete=models.CASCADE, related_name="plugins")
     slug = models.CharField(max_length=128, help_text="Plugin slug, e.g. woocommerce.")
@@ -234,6 +236,14 @@ class WordPressPlugin(NetBoxModel):
         max_length=8, choices=PluginSourceChoices, default=PluginSourceChoices.WPORG
     )
     source_url = models.URLField(blank=True, help_text="Fetch URL for url/zip sources.")
+    repository = models.CharField(
+        max_length=200, blank=True, validators=[REPOSITORY_VALIDATOR],
+        help_text="Forgejo source: the repository, <Org>/<repo>.",
+    )
+    commit = models.CharField(
+        max_length=40, blank=True, validators=[COMMIT_VALIDATOR],
+        help_text="Forgejo source: the pinned commit id (full 40 hex).",
+    )
 
     class Meta:
         ordering = ["site", "slug"]
@@ -256,6 +266,19 @@ class WordPressPlugin(NetBoxModel):
 
     def get_state_color(self):
         return PluginStateChoices.colors.get(self.state)
+
+    def clean(self):
+        super().clean()
+        if self.source == PluginSourceChoices.FORGEJO:
+            errors = {f: "Required for a Forgejo source." for f in ("repository", "commit") if not getattr(self, f)}
+            errors |= {
+                f: "Leave blank for a Forgejo source (the commit pins the code)."
+                for f in ("version", "source_url") if getattr(self, f)
+            }
+        else:
+            errors = {f: "Only used by a Forgejo source." for f in ("repository", "commit") if getattr(self, f)}
+        if errors:
+            raise ValidationError(errors)
 
 
 class WordPressMuPlugin(NetBoxModel):

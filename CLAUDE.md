@@ -89,8 +89,8 @@ a blob.
     nested key via `wp option patch`), `value`, `value_format` (string/json; json must parse,
     enforced by `clean()`); unique `(site, name, key_path)`.
   - **WordPressPlugin** (FK, CASCADE): `slug`, `version` (blank=latest), `state`
-    (absent/present_inactive/active — `absent` uninstalls), `source` (wporg/url/zip), `source_url`;
-    unique `(site, slug)`.
+    (absent/present_inactive/active — `absent` uninstalls), `source` (wporg/url/zip/forgejo),
+    `source_url`, `repository` + `commit` (forgejo only, enforced by `clean()`); unique `(site, slug)`.
   - **WordPressMuPlugin** (FK, CASCADE): `name` (bare `*.php` file in `wp-content/mu-plugins/`),
     `repository` (Forgejo `<Org>/<repo>`), `commit` (full 40-hex id), `source_path` (path of the
     file inside that repo; no leading `/`, no `..`), `sha256` (lowercase hex of the file bytes),

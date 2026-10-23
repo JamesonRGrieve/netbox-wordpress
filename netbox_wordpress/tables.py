@@ -65,7 +65,10 @@ class WordPressPluginTable(NetBoxTable):
 
     class Meta(NetBoxTable.Meta):
         model = WordPressPlugin
-        fields = ("pk", "id", "site", "slug", "version", "state", "source", "source_url", "tags", "created", "last_updated")
+        fields = (
+            "pk", "id", "site", "slug", "version", "state", "source", "source_url", "repository", "commit",
+            "tags", "created", "last_updated",
+        )
         default_columns = ("site", "slug", "version", "state", "source")
 
 

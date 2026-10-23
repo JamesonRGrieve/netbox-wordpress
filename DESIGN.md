@@ -179,7 +179,9 @@ rest of a plugin's settings array alone); `WordPressSite.site_icon_url` → a me
 `site_icon` option; `WordPressMuPlugin` rows → the `wordpress_muplugin` resource, which writes the
 file at `source_path` in `repository` at `commit` to `wp-content/mu-plugins/<name>`, checked
 against `sha256` (code in Forgejo, pin in NetBox);
-`WordPressPlugin`
+`WordPressPlugin` with `source = forgejo` → the `wordpress_plugin` resource installs OMG's own plugin
+from the Forgejo archive of `repository` at `commit` (the archive's embedded commit id must equal the
+pin; a hash of the installed files detects hand edits); `WordPressPlugin`
 / `WordPressTheme` `state` → `wp plugin/theme` install-state — `active` installs+activates,
 `present_inactive` installs+deactivates, and **`absent` uninstalls** (so the SoT can retire cruft
 like W3TC/LiteSpeed, not merely leave it off); `WordPressContentDirectory` → drives the

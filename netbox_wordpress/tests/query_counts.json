@@ -1,0 +1,9 @@
+{
+  "wordpressconstant:api_list_objects": 13,
+  "wordpresscontentdirectory:api_list_objects": 13,
+  "wordpressmuplugin:api_list_objects": 13,
+  "wordpressoption:api_list_objects": 13,
+  "wordpressplugin:api_list_objects": 13,
+  "wordpresssite:api_list_objects": 13,
+  "wordpresstheme:api_list_objects": 13
+}

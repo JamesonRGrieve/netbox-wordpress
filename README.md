@@ -36,8 +36,9 @@ plugin only references them by FK.
     `key_path`) or one nested key of a settings array (dotted `key_path`, e.g. `wpseo` /
     `enable_xml_sitemap`); `value_format` string or json. Unique per `(site, name, key_path)`.
   - **WordPressPlugin** (FK) — `slug`, `version` (blank = latest), `state`
-    (absent / present_inactive / active — `absent` uninstalls), `source` (wporg/url/zip),
-    `source_url`; unique per `(site, slug)`.
+    (absent / present_inactive / active — `absent` uninstalls), `source` (wporg/url/zip/forgejo),
+    `source_url`, and for a `forgejo` source `repository` (`<Org>/<repo>`) + `commit` (full 40-hex;
+    the commit is the version, so `version`/`source_url` stay blank); unique per `(site, slug)`.
   - **WordPressMuPlugin** (FK) — one site-specific must-use plugin: `name` (the `*.php` file
     written to `wp-content/mu-plugins/`), `repository` (Forgejo `<Org>/<repo>`), `commit` (pinned
     40-hex id), `source_path` (the file inside that repo), `sha256` (hex hash of its exact bytes),
