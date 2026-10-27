@@ -315,7 +315,7 @@ class WordPressMuPluginModelTest(TestCase):
     def test_repository_validator(self):
         for bad in ("bracoach-square-sync", "a/b/c", "/a/b", "a/", "a b/c", ""):
             self._assert_invalid("repository", repository=bad)
-        self._mu(repository="ObsessedMediaGroup/woocommerce-square-guard").full_clean()
+        self._mu(repository="ObsessedMediaGroup/wp-woo-square-guard").full_clean()
 
     def test_commit_validator(self):
         for bad in ("6cfae4c", "A" * 40, "g" * 40, "a" * 41, "main", ""):
